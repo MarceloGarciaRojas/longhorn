@@ -134,7 +134,7 @@ export default function Home() {
         </div>
         <div className="cta-copy">
           <p>Cuéntanos cómo funciona hoy tu pyme. Te mostraremos cómo Longhorn puede ayudarte a ordenar la operación y preparar el crecimiento.</p>
-          <a className="button button-light" href="mailto:contacto@longhorn.cl">Solicitar una demo <span aria-hidden="true">↗</span></a>
+          <a className="button button-light" href="#inicio">Solicitar una demo <span aria-hidden="true">↗</span></a>
         </div>
       </section>
 
@@ -147,7 +147,7 @@ export default function Home() {
         <div className="footer-main">
           <div><a className="brand footer-brand" href="#inicio"><span className="brand-mark">L</span><span>LONGHORN</span></a><p>Gestión empresarial clara para pymes que quieren crecer con control.</p></div>
           <div><h3>Explora</h3><a href="#solucion">Solución</a><a href="#metodo">Cómo funciona</a><a href="#nosotros">Nosotros</a></div>
-          <div><h3>Contacto</h3><a href="mailto:contacto@longhorn.cl">contacto@longhorn.cl</a><span>Santiago, Chile</span></div>
+          <div><h3>Contacto</h3><a href="#contacto">Solicitar una demo</a><span>Canal comercial por definir</span></div>
         </div>
         <div className="footer-bottom"><span>© 2026 Longhorn. Todos los derechos reservados.</span><span>Privacidad · Términos</span></div>
       </footer>
