@@ -9,27 +9,23 @@ export async function generateMetadata(): Promise<Metadata> {
   const socialImage = `${protocol}://${host}/og.png`;
 
   return {
-    title: "Longhorn | Gestión empresarial para pymes",
-    description: "Ordena la operación de tu pyme, mejora la visibilidad y toma decisiones claras con Longhorn.",
+    title: "Longhorn | Gestión digital clara para pymes",
+    description: "Prototipo de Longhorn: una experiencia simple para ordenar la presencia y gestión digital de tu pyme.",
     openGraph: {
-      title: "Longhorn | Orden para hoy. Impulso para crecer.",
-      description: "Gestión empresarial clara para pymes que quieren crecer con control.",
+      title: "Longhorn | Menos complejidad, más control",
+      description: "Prototipo documental de una experiencia digital clara para pymes.",
       type: "website",
-      images: [{ url: socialImage, width: 1200, height: 630, alt: "Longhorn, orden para hoy e impulso para crecer" }],
+      images: [{ url: socialImage, width: 1200, height: 630, alt: "Longhorn, gestión digital clara para pymes" }],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Longhorn | Orden para hoy. Impulso para crecer.",
-      description: "Gestión empresarial clara para pymes que quieren crecer con control.",
+      title: "Longhorn | Menos complejidad, más control",
+      description: "Prototipo documental de una experiencia digital clara para pymes.",
       images: [socialImage],
     },
   };
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="es">
-      <body>{children}</body>
-    </html>
-  );
+  return <html lang="es"><body>{children}</body></html>;
 }
