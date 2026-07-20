@@ -41,12 +41,11 @@ function Landing({ go }: { go: (view: View) => void }) {
         <div className="hero-card">
           <div className="glow glow-one" /><div className="glow glow-two" />
           <div className="hero-copy">
-            <span className="tag"><i /> Prototipo documental</span>
             <h1 className="hero-wordmark"><img src="/nexi-wordmark.png" alt="nexi" /></h1>
             <p>Una forma clara, profesional y simple de ordenar la presencia digital y la gestión diaria de tu pyme.</p>
             <div className="action-row"><button className="pill primary" onClick={() => go("onboarding")}>Registrarme</button><button className="pill ghost video-button" onClick={() => go("video")}><span className="video-icon" aria-hidden="true">▶</span> Ver cómo funciona</button></div>
           </div>
-          <div className="landscape-frame"><img src="/purple-mountain.jpg" alt="Paisaje de montaña en tonos violetas" /></div>
+          <div className="landscape-frame"><img src="/nexi-hero.png" alt="Ecosistema digital conectado de nexi" /></div>
         </div>
       </section>
 

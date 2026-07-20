@@ -17,7 +17,7 @@ test("server-renders the nexi prototype", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>nexi \| Gestión digital clara para pymes<\/title>/i);
-  assert.match(html, /Prototipo documental/);
+  assert.match(html, /nexi-wordmark\.png/);
   assert.match(html, /Menos complejidad/);
   assert.match(html, /ALCANCE MVP/);
   assert.match(html, /tres plantillas/);
