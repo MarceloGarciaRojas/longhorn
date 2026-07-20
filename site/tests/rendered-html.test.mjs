@@ -21,6 +21,7 @@ test("server-renders the nexi prototype", async () => {
   assert.match(html, /Menos complejidad/);
   assert.match(html, /ALCANCE MVP/);
   assert.match(html, /tres plantillas/);
+  assert.doesNotMatch(html, /Guía visual|Sistema visual/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/);
 });
 

@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 
-type View = "landing" | "login" | "onboarding" | "video" | "dashboard" | "design";
+type View = "landing" | "login" | "onboarding" | "video" | "dashboard";
 
 const problems = [
   ["Sitio desactualizado", "La información clave queda obsoleta y tus clientes pierden confianza."],
@@ -77,7 +77,7 @@ function Landing({ go }: { go: (view: View) => void }) {
 
       <section className="cta"><span className="kicker">Construyamos claridad</span><h2>Conoce cómo podría verse nexi en tu pyme.</h2><button className="pill light" onClick={() => go("onboarding")}>Ver experiencia demo <span>→</span></button></section>
     </main>
-    <footer><div><Brand inverse /><p>Gestión digital simple para pymes que quieren crecer con control.</p></div><div><b>Prototipo</b><button onClick={() => go("dashboard")}>Panel demostrativo</button><button onClick={() => go("design")}>Guía visual</button></div><small>© 2026 nexi · Etapa de preparación documental</small></footer>
+    <footer><div><Brand inverse /><p>Gestión digital simple para pymes que quieren crecer con control.</p></div><div><b>Prototipo</b><button onClick={() => go("dashboard")}>Panel demostrativo</button></div><small>© 2026 nexi · Etapa de preparación documental</small></footer>
   </div>;
 }
 
@@ -115,7 +115,7 @@ function VideoDemo({ go }: { go: (view: View) => void }) {
 
 function Dashboard({ go }: { go: (view: View) => void }) {
   const [tab, setTab] = useState("Mis sitios");
-  return <div className="dashboard-shell"><aside><Brand inverse /><div className="user-card"><i>CM</i><span><b>Carlos Mendoza</b><small>Administrador</small></span></div><nav>{["Mis sitios", "Mi plan", "Mensajes", "Configuración"].map((x,i) => <button className={tab === x ? "active" : ""} key={x} onClick={() => setTab(x)}><span>{["▦","◇","○","⚙"][i]}</span>{x}</button>)}</nav><div className="demo-note"><b>Modo demostración</b><p>Sin datos reales ni cambios persistentes.</p></div><button className="exit" onClick={() => go("landing")}>← Volver al sitio</button></aside><main><header><div><span className="kicker">Panel de Carlos Mendoza</span><h1>{tab}</h1></div><button className="pill subtle" onClick={() => go("design")}>Guía visual</button></header>{tab === "Mis sitios" ? <SitesPanel /> : <EmptyPanel title={tab} />}</main></div>;
+  return <div className="dashboard-shell"><aside><Brand inverse /><div className="user-card"><i>CM</i><span><b>Carlos Mendoza</b><small>Administrador</small></span></div><nav>{["Mis sitios", "Mi plan", "Mensajes", "Configuración"].map((x,i) => <button className={tab === x ? "active" : ""} key={x} onClick={() => setTab(x)}><span>{["▦","◇","○","⚙"][i]}</span>{x}</button>)}</nav><div className="demo-note"><b>Modo demostración</b><p>Sin datos reales ni cambios persistentes.</p></div><button className="exit" onClick={() => go("landing")}>← Volver al sitio</button></aside><main><header><div><span className="kicker">Panel de Carlos Mendoza</span><h1>{tab}</h1></div></header>{tab === "Mis sitios" ? <SitesPanel /> : <EmptyPanel title={tab} />}</main></div>;
 }
 
 function SitesPanel() {
@@ -126,16 +126,11 @@ function SitesPanel() {
 
 function EmptyPanel({ title }: { title: string }) { return <section className="empty-panel"><span>◇</span><h2>{title}</h2><p>Esta sección es una representación visual. Su funcionalidad se definirá y aprobará durante la documentación del MVP.</p></section>; }
 
-function Design({ go }: { go: (view: View) => void }) {
-  return <div className="design-page"><header><Brand /><button className="pill ghost" onClick={() => go("landing")}>← Volver al sitio</button></header><main><span className="kicker">Sistema visual · Prototipo</span><h1>Una interfaz serena,<br />clara y cercana.</h1><p className="design-lead">El adjunto inspira una dirección violeta suave, con superficies luminosas, bordes generosos y jerarquías muy legibles.</p><section><h2>Paleta</h2><div className="swatches">{[["Tinta","#171329"],["Violeta","#7553C8"],["Lavanda","#E8DFF8"],["Niebla","#F8F6FC"],["Blanco","#FFFFFF"]].map(([n,c]) => <article key={n}><i style={{background:c}} /><b>{n}</b><small>{c}</small></article>)}</div></section><section><h2>Componentes</h2><div className="component-sample"><button className="pill primary">Acción principal</button><button className="pill subtle">Acción secundaria</button><span className="tag"><i /> Estado activo</span><div className="mini-card"><small>Indicador</small><strong>82%</strong><span>Contenido completo</span></div></div></section></main></div>;
-}
-
 export default function Home() {
   const [view, setView] = useState<View>("landing");
   if (view === "login") return <Login go={setView} />;
   if (view === "onboarding") return <><Landing go={setView} /><div className="blur-overlay" /><Onboarding go={setView} /></>;
   if (view === "video") return <><Landing go={setView} /><div className="blur-overlay" /><VideoDemo go={setView} /></>;
   if (view === "dashboard") return <Dashboard go={setView} />;
-  if (view === "design") return <Design go={setView} />;
   return <Landing go={setView} />;
 }
