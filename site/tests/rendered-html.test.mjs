@@ -11,12 +11,12 @@ async function render() {
   }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("server-renders the Longhorn prototype", async () => {
+test("server-renders the nexi prototype", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>Longhorn \| Gestión digital clara para pymes<\/title>/i);
+  assert.match(html, /<title>nexi \| Gestión digital clara para pymes<\/title>/i);
   assert.match(html, /Prototipo documental/);
   assert.match(html, /Menos complejidad/);
   assert.match(html, /ALCANCE MVP/);

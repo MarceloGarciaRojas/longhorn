@@ -9,17 +9,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const socialImage = `${protocol}://${host}/og.png`;
 
   return {
-    title: "Longhorn | Gestión digital clara para pymes",
-    description: "Prototipo de Longhorn: una experiencia simple para ordenar la presencia y gestión digital de tu pyme.",
+    title: "nexi | Gestión digital clara para pymes",
+    description: "Prototipo de nexi: una experiencia simple para ordenar la presencia y gestión digital de tu pyme.",
     openGraph: {
-      title: "Longhorn | Menos complejidad, más control",
+      title: "nexi | Menos complejidad, más control",
       description: "Prototipo documental de una experiencia digital clara para pymes.",
       type: "website",
-      images: [{ url: socialImage, width: 1200, height: 630, alt: "Longhorn, gestión digital clara para pymes" }],
+      images: [{ url: socialImage, width: 1200, height: 630, alt: "nexi, gestión digital clara para pymes" }],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Longhorn | Menos complejidad, más control",
+      title: "nexi | Menos complejidad, más control",
       description: "Prototipo documental de una experiencia digital clara para pymes.",
       images: [socialImage],
     },
