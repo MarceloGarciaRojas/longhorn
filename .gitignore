@@ -1,1 +1,62 @@
+# Dependencies and package-manager caches
+node_modules/
 .pnpm-store/
+.turbo/
+
+# Build and framework output
+.next/
+.vinext/
+dist/
+build/
+out/
+.wrangler/
+.vercel/
+outputs/
+work/
+*.tsbuildinfo
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+.test-results/
+
+# Environment files and credentials
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+
+# Logs, caches and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.backup
+*.dump
+*~
+.cache/
+
+# Local databases and Docker volumes
+*.db
+*.sqlite
+*.sqlite-*
+docker-data/
+postgres-data/
+.media-local/
+
+# Operating-system and private editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local source bundles and private reports
+/longhorn.zip
+/plantillas/
+/docs/Registro_tecnico_base_Longhorn_nexi.docx

@@ -1,9 +1,18 @@
 # Longhorn
 
 Longhorn es una plataforma SaaS B2B multi-tenant orientada a pymes.
+La marca comercial visible del producto es **nexi**.
 
 ## Estado actual
 
-El proyecto se encuentra en etapa de preparación y definición. Todavía no existe una aplicación funcional.
+El repositorio contiene la landing de nexi, persistencia PostgreSQL con Row
+Level Security, autenticación y sesiones opacas, los paneles administrativo y
+cliente, contenido estructurado `restaurant.v1/v2`, biblioteca multimedia
+local/CI y un onboarding operativo completo desde solicitud hasta publicación
+verificada. Otros rubros, proveedores productivos, pagos y tienda no están
+implementados. El catálogo actual tiene dos plantillas de restaurante; una
+tercera permanece pendiente como objetivo del MVP.
+
+La aplicación ejecutable se encuentra en [`site/`](site/README.md).
 
 Consulta el [índice de documentación](docs/README.md).

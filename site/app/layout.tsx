@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { getAppConfig } from "@/src/config/app-config";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const socialImage = `${protocol}://${host}/og.png`;
+  const config = getAppConfig();
+  const socialImage = `${config.publicUrl}/og.png`;
 
   return {
+    metadataBase: new URL(config.publicUrl),
     title: "nexi | Gestión digital clara para pymes",
     description: "Prototipo de nexi: una experiencia simple para ordenar la presencia y gestión digital de tu pyme.",
     openGraph: {
@@ -27,5 +26,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es"><body>{children}</body></html>;
+  const config = getAppConfig();
+  return <html lang="es" data-app-environment={config.environment}><body>{children}</body></html>;
 }

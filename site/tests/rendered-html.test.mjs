@@ -6,9 +6,11 @@ async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
-  return worker.fetch(new Request("http://localhost/", { headers: { accept: "text/html" } }), {
-    ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
-  }, { waitUntil() {}, passThroughOnException() {} });
+  return worker.fetch(
+    new Request("http://localhost/", { headers: { accept: "text/html" } }),
+    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    { waitUntil() {}, passThroughOnException() {} },
+  );
 }
 
 test("server-renders the nexi prototype", async () => {
@@ -20,20 +22,25 @@ test("server-renders the nexi prototype", async () => {
   assert.match(html, /nexi-wordmark\.png/);
   assert.match(html, /Menos complejidad/);
   assert.match(html, /ALCANCE MVP/);
-  assert.match(html, /tres plantillas/);
+  assert.match(html, /dos plantillas/);
   assert.doesNotMatch(html, /Guía visual|Sistema visual/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/);
 });
 
-test("keeps the prototype scope explicit and responsive", async () => {
-  const [page, css, layout] = await Promise.all([
+test("keeps the landing and dynamic public resolver explicit and responsive", async () => {
+  const [page, landing, css, layout] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/landing-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /Modo demostración/);
-  assert.match(page, /No se envían ni almacenan datos/);
-  assert.match(page, /Cafetería de barrio/);
+  assert.match(landing, /href="\/ingresar"/);
+  assert.doesNotMatch(landing, /cualquier correo y contraseña/);
+  assert.doesNotMatch(landing, /nexi-interno/);
+  assert.match(landing, /href="\/comenzar"/);
+  assert.doesNotMatch(landing, /Cafetería de barrio/);
+  assert.match(page, /resolvePublicSite/);
+  assert.match(page, /renderRegisteredTemplate/);
   assert.match(css, /@media\(max-width:620px\)/);
   assert.match(css, /prefers-reduced-motion:reduce/);
   assert.match(layout, /lang="es"/);

@@ -1,0 +1,198 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify application
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17.10-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: nexi_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: nexi_postgres_local
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nexi_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    defaults:
+      run:
+        working-directory: site
+    env:
+      APP_ENV: test
+      APP_URL: http://localhost:3000
+      APP_VERSION: 0.1.0
+      APP_COMMIT_SHA: ${{ github.sha }}
+      LOG_LEVEL: warn
+      SITE_DELETION_GRACE_HOURS: 48
+      DATABASE_ADMIN_URL: postgresql://postgres:nexi_postgres_local@127.0.0.1:5432/nexi_test
+      DATABASE_MIGRATION_URL: postgresql://nexi_migrator:nexi_migration_local@127.0.0.1:5432/nexi_test
+      DATABASE_URL: postgresql://nexi_app:nexi_app_local@127.0.0.1:5432/nexi_test
+      TEST_DATABASE_URL: postgresql://nexi_app:nexi_app_local@127.0.0.1:5432/nexi_test
+      MEDIA_STORAGE_PROVIDER: local
+      MEDIA_LOCAL_SERVICE_URL: http://127.0.0.1:43127
+      MEDIA_LOCAL_SERVICE_PORT: 43127
+      MEDIA_UPLOAD_MAX_BYTES: 10485760
+      MEDIA_MAX_WIDTH: 8000
+      MEDIA_MAX_HEIGHT: 8000
+      MEDIA_MAX_PIXELS: 40000000
+      MEDIA_MAX_CONCURRENT_UPLOADS: 2
+      MEDIA_PROCESSING_MODE: synchronous
+      ONBOARDING_PUBLIC_FORM_ENABLED: true
+      ONBOARDING_PUBLIC_RATE_LIMIT: 5
+      ONBOARDING_MAX_NOTES_LENGTH: 1000
+      ONBOARDING_SUPPORTED_INDUSTRIES: restaurant
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+          run_install: false
+
+      - name: Configure Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: site/.nvmrc
+          cache: pnpm
+          cache-dependency-path: site/pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Bootstrap restricted database roles
+        run: pnpm db:bootstrap
+
+      - name: Apply versioned migrations
+        run: pnpm db:migrate
+
+      - name: Load synthetic tenant data
+        run: pnpm db:seed
+
+      - name: Configure isolated media storage
+        run: echo "MEDIA_LOCAL_ROOT=${RUNNER_TEMP}/nexi-media-ci" >> "$GITHUB_ENV"
+
+      - name: Start local media processor
+        run: |
+          pnpm media:serve > "${RUNNER_TEMP}/nexi-media-service.log" 2>&1 &
+          echo $! > "${RUNNER_TEMP}/nexi-media-service.pid"
+
+      - name: Verify PostgreSQL isolation
+        run: pnpm test:db
+
+      - name: Verify codebase
+        run: pnpm verify
+
+      - name: Verify authentication and session controls
+        run: pnpm test:auth
+
+      - name: Verify nexi administrator panel
+        run: pnpm test:admin
+
+      - name: Verify Client Administrator panel
+        run: pnpm test:client
+
+      - name: Verify sites, requests, messaging and outbox
+        run: pnpm test:operations
+
+      - name: Verify templates, content, publication and public resolution
+        run: pnpm test:content
+
+      - name: Verify media seed isolation, rollback and idempotency
+        run: pnpm test:media-seed
+
+      - name: Prepare canonical multimedia scenario
+        run: pnpm test:prepare-media
+
+      - name: Verify multimedia isolation and processing
+        run: pnpm test:media
+
+      - name: Verify restaurant v2 and controlled templates
+        run: pnpm test:templates
+
+      - name: Restore canonical data for onboarding integration
+        run: pnpm test:prepare-base
+
+      - name: Verify operational onboarding
+        run: pnpm test:onboarding
+
+      - name: Verify onboarding synthetic commands
+        run: |
+          pnpm onboarding:seed
+          pnpm onboarding:status
+          pnpm onboarding:seed
+          pnpm onboarding:reset-test
+
+      - name: Restore canonical synthetic data for E2E
+        run: pnpm test:prepare-base
+
+      - name: Verify protected HTTP flows end to end
+        run: pnpm test:e2e
+
+      - name: Restore canonical data for administrator E2E
+        run: pnpm test:prepare-base
+
+      - name: Verify administrator lifecycle end to end
+        run: pnpm test:admin-e2e
+
+      - name: Restore canonical data for client E2E
+        run: pnpm test:prepare-base
+
+      - name: Verify Client Administrator flows end to end
+        run: pnpm test:client-e2e
+
+      - name: Restore canonical data for operations E2E
+        run: pnpm test:prepare-base
+
+      - name: Verify sites, requests and messaging end to end
+        run: pnpm test:operations-e2e
+
+      - name: Restore canonical synthetic data for content E2E
+        run: pnpm test:prepare-base
+
+      - name: Verify content publication end to end
+        run: pnpm test:content-e2e
+
+      - name: Restore canonical synthetic data for media E2E
+        run: pnpm test:prepare-media
+
+      - name: Verify multimedia and template flows end to end
+        run: pnpm test:media-e2e
+
+      - name: Restore canonical synthetic data for onboarding E2E
+        run: pnpm test:prepare-base
+
+      - name: Verify onboarding over protected HTTP routes
+        run: pnpm test:onboarding-e2e
+
+      - name: Audit dependencies
+        run: pnpm security:audit
+
+      - name: Clean synthetic media and local processor
+        if: always()
+        run: |
+          if [ -f "${RUNNER_TEMP}/nexi-media-service.pid" ]; then
+            kill "$(cat "${RUNNER_TEMP}/nexi-media-service.pid")" || true
+          fi
+          pnpm onboarding:reset-test || true
+          pnpm media:clean-test || true
