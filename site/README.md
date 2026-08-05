@@ -401,3 +401,8 @@ No hay contraseñas fijas para clientes de onboarding. Las pruebas generan
 identidades y claves efímeras. No se conectan Supabase, correo, WhatsApp, Flow,
 DNS ni almacenamiento productivo. Detalle:
 [`docs/etapa-9a-onboarding-operativo.md`](../docs/etapa-9a-onboarding-operativo.md).
+
+La evidencia de preparación del Pull Request #3 y las condiciones pendientes
+están versionadas respectivamente en
+[`docs/informe-preparacion-merge-pr-3.md`](../docs/informe-preparacion-merge-pr-3.md)
+y [`docs/deuda-tecnica.md`](../docs/deuda-tecnica.md).

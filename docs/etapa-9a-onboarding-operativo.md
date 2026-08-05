@@ -273,7 +273,7 @@ No se ejecutó `git add`, commit, push ni despliegue.
 | Typecheck | Aprobado |
 | Build | Aprobado |
 | Secretos | 256 archivos, aprobado |
-| Auditoría npm online | Sin vulnerabilidades conocidas |
+| Auditoría de dependencias mediante `pnpm audit` | Sin vulnerabilidades críticas ni altas |
 
 Las suites especializadas combinan algunas pruebas unitarias e integración; sus
 totales no deben sumarse como si fueran casos únicos. `pnpm verify` incluye las
@@ -321,12 +321,13 @@ CI.
 `.github/workflows/ci.yml` configura PostgreSQL temporal, roles, migraciones,
 seed, almacenamiento temporal, RLS, autenticación, paneles, operaciones,
 contenido, media seed, multimedia, plantillas, onboarding, comandos sintéticos,
-los E2E, `verify` y auditoría npm.
+los E2E, `verify` y auditoría de dependencias mediante `pnpm audit`.
 
 Restaura la base antes de bloques mutables y limpia procesos/artefactos
 sintéticos. No despliega, no contiene secretos reales y no conecta Supabase,
 R2, correo ni otros proveedores productivos. Cualquier comando no cero falla el
-job. La ejecución alojada real continúa pendiente antes de staging.
+job. Al momento de este cierre histórico, la ejecución alojada real continuaba
+pendiente; su comprobación posterior se registra en la sección AA.
 
 ## U. Documentación
 
@@ -376,11 +377,12 @@ Bloqueantes: ninguno.
 - observabilidad de conversión, reintentos y verificación;
 - backups y restore operativo;
 - pruebas de carga;
-- ejecución alojada del workflow;
+- ejecución alojada del workflow, pendiente al momento de este cierre y
+  comprobada posteriormente en el PR #3 (sección AA);
 - tercera plantilla de restaurante.
 
-La auditoría npm online local aprobó; debe seguir ejecutándose en CI y antes de
-cada promoción.
+La auditoría de dependencias mediante `pnpm audit` aprobó localmente; debe seguir
+ejecutándose en CI y antes de cada promoción.
 
 ## X. Riesgos para staging
 
@@ -404,7 +406,8 @@ Staging no debe habilitarse hasta aprobar y validar:
   esquema o multimedia. Esto es coherente con la regla vigente de no caducidad
   de mensajes y evita agregar una política no aprobada.
 - La auditoría online, inicialmente bloqueada por sandbox, se ejecutó con acceso
-  autorizado y aprobó. La ejecución continua alojada sigue pendiente.
+  autorizado y aprobó. En ese momento la ejecución continua alojada seguía
+  pendiente; fue comprobada posteriormente como se registra en la sección AA.
 - No se añadió cobertura artificial ni se redujo una prueba para obtener verde.
 
 ## Z. Recomendación
@@ -414,3 +417,29 @@ gobierno del catálogo y preparación del piloto.
 
 No debe comenzar hasta que el Product Owner revise y apruebe formalmente este
 cierre.
+
+## AA. Actualización posterior de la evidencia alojada
+
+El 2026-08-04 se comprobó la ejecución alojada correspondiente al Pull Request
+#3 sobre el SHA exacto
+`830345bd15796274826ee088e9fcf64ea89eabad`.
+
+| Evidencia | Valor comprobado |
+| --- | --- |
+| Pull Request | #3 |
+| Workflow | `CI` |
+| Ejecución | `30877506500` |
+| Job | `91891835577` (`Verify application`) |
+| Evento | `pull_request` |
+| SHA evaluado | `830345bd15796274826ee088e9fcf64ea89eabad` |
+| Resultado | `success` |
+| Pasos fallidos | 0 |
+
+La ejecución incluyó instalación congelada, PostgreSQL temporal, roles,
+migraciones, seed, RLS, autenticación, paneles, operaciones, contenido,
+multimedia, plantillas, onboarding, E2E, build, escaneo de secretos y auditoría
+de dependencias mediante `pnpm audit`.
+
+Esta evidencia cierra exclusivamente la condición histórica de CI alojada y
+habilita la revisión humana final del PR. No autoriza merge automático, staging,
+producción, proveedores productivos ni el inicio de la Etapa 9B.

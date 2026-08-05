@@ -16,3 +16,7 @@ tercera permanece pendiente como objetivo del MVP.
 La aplicación ejecutable se encuentra en [`site/`](site/README.md).
 
 Consulta el [índice de documentación](docs/README.md).
+La preparación del Pull Request #3 está registrada en el
+[informe de preparación para merge](docs/informe-preparacion-merge-pr-3.md) y
+las condiciones pendientes se mantienen en el
+[registro central de deuda técnica](docs/deuda-tecnica.md).
