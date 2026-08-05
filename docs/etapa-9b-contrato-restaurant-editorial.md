@@ -6,7 +6,7 @@
 - **Fecha:** 2026-08-04
 - **Línea base:** `042261587df0bf8aeae04a49eea862d5de1e489b`
 - **Entornos autorizados:** local y CI
-- **Estado:** contrato definido; implementación pendiente
+- **Estado:** RENDERER IMPLEMENTADO, AÚN NO REGISTRADO
 
 Este documento delimita la tercera plantilla de restaurante. No registra un
 renderer, no incorpora datos al catálogo, no modifica `restaurant.v2` y no hace
@@ -687,10 +687,95 @@ este contrato. 9B.2 deberá:
 5. conservar `restaurant.v2`, migraciones, dependencias y proveedores;
 6. repetir la compuerta de seguridad y regresión antes de ampliar alcance.
 
-Hasta esa autorización:
+Condiciones registradas en 9B.1 antes de esa autorización:
 
-- la tercera plantilla no está implementada;
-- no existe registro `restaurant-editorial-v1`;
-- no aparece en el catálogo;
-- no puede seleccionarse ni publicarse;
-- la landing debe seguir informando dos plantillas operativas.
+- la tercera plantilla no estaba implementada;
+- no existía registro `restaurant-editorial-v1`;
+- no aparecía en el catálogo;
+- no podía seleccionarse ni publicarse;
+- la landing debía seguir informando dos plantillas operativas.
+
+## Q. Registro de implementación aislada 9B.2
+
+Esta sección actualiza el estado técnico después de autorizar 9B.2. Conserva
+el contrato precedente como evidencia de diseño y no habilita la plantilla en
+ningún flujo funcional.
+
+### Estado
+
+**RENDERER IMPLEMENTADO, AÚN NO REGISTRADO**
+
+### Ubicación real
+
+- `site/src/content/renderers/restaurant-editorial.tsx`: wrapper del renderer
+  con la firma tipada aprobada y asociación al CSS Module.
+- `site/src/content/renderers/restaurant-editorial-view.tsx`: estructura React
+  presentacional, resolución segura de medios y harness aislado validado.
+- `site/src/content/renderers/restaurant-editorial.module.css`: composición
+  mobile-first, breakpoints contractuales, foco y reducción de movimiento.
+- `site/tests/unit/restaurant-v2.test.ts`: pruebas directas del renderer sin
+  registro en manifiesto, catálogo o seeds.
+
+### Componentes y decisiones
+
+- `RestaurantEditorialRenderer` es el wrapper que utilizará una integración
+  futura; todavía no es importado por `renderer-registry.tsx`.
+- `RestaurantEditorialView` mantiene marcado propio y no reutiliza
+  `RestaurantMediaRenderer`, evitando que Editorial sea una variante
+  superficial de Classic o Modern.
+- `renderRestaurantEditorialIsolated` verifica de forma explícita
+  `restaurant.v2`, versión 2, ejecuta el validador vigente y permite pruebas por
+  import interno sin crear rutas o parámetros de navegador.
+- `EditorialImage` utiliza `next/image`, dimensiones del
+  `MediaRenderManifest` y solamente rutas internas `/media/` o
+  `/api/media/private/` que coincidan con el activo y la variante solicitados.
+  Una referencia ausente, externa, cruzada, inválida o no resuelta se omite.
+- La composición visual derivada se limita a un máximo de tres medios únicos de
+  productos disponibles y solo aparece con dos o más. No persiste galería ni
+  etiqueta productos como destacados.
+- No se extrajeron utilidades desde Classic o Modern y no se modificó su
+  comportamiento.
+- No se agregaron fuentes, scripts, proveedores, dependencias o datos
+  comerciales fijos.
+
+### Diferencias respecto del contrato
+
+La ubicación principal y la firma se conservan. Se añadió el archivo interno
+`restaurant-editorial-view.tsx` para separar el CSS Module del árbol React que
+se prueba directamente bajo Node. Esta separación no introduce una interfaz
+pública, ruta, registro ni frontera funcional nueva.
+
+No existen diferencias visuales o de contenido respecto del contrato. La
+autorización multimedia continúa perteneciendo a la frontera server-side; el
+renderer solo consume el manifiesto ya autorizado y aplica una comprobación
+adicional de ruta y dimensiones.
+
+### Pruebas implementadas
+
+Las pruebas directas cubren:
+
+- contenido `restaurant.v2` completo, landmarks y un único `h1`;
+- campos opcionales, categorías sin productos disponibles y productos sin
+  precio;
+- ausencia, resolución válida y rechazo seguro de multimedia externa o no
+  referenciada;
+- textos en sus límites máximos;
+- redes sociales opcionales y ausencia de enlaces administrativos;
+- salida determinista y no mutación de la entrada;
+- rechazo de esquema, versión y forma de contenido incompatibles;
+- tokens CSS, wrapping, foco, tamaño táctil, reducción de movimiento y
+  breakpoints de 600, 900 y 1440 CSS px;
+- confirmación de que `restaurant-editorial-v1` no pertenece al manifiesto
+  activo.
+
+### Limitaciones vigentes
+
+- El renderer no está registrado en el manifiesto ni en el registry activo.
+- No existe fila de catálogo, seed, selector, preview de panel o asignación.
+- Onboarding, publicación y restauración no pueden usar Editorial todavía.
+- La verificación responsive de este bloque es estructural y mediante CSS; la
+  integración futura deberá añadir evidencia visual en los viewports
+  contractuales una vez exista un preview autorizado.
+- Continúan la vulnerabilidad moderada conocida de PostCSS, las seis
+  advertencias heredadas `no-img-element` y la ausencia de proveedor multimedia
+  productivo.
