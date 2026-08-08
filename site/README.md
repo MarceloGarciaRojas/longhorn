@@ -378,8 +378,9 @@ Administrador nexi con AAL2 revisa y convierte, y el Cliente Administrador
 completa `restaurant_onboarding.v1`. La aprobación queda vinculada a revisión,
 plantilla y checksum antes de reutilizar la publicación existente.
 
-Actualmente existen dos plantillas operativas de restaurante. La tercera
-plantilla continúa como objetivo futuro del MVP y no forma parte de 9A.
+Actualmente existen tres plantillas operativas de restaurante en local/CI:
+Classic, Modern y Restaurante Editorial. Las tres admiten preview, selección,
+publicación, restauración y onboarding sobre los contratos vigentes.
 
 Variables no secretas:
 

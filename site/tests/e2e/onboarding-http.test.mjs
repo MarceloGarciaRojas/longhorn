@@ -357,7 +357,7 @@ test("public request becomes a verified publication through protected HTTP route
         tenant_slug: businessSlug,
         site_slug: businessSlug,
         plan_id: "61111111-1111-4111-8111-111111111111",
-        template_version_id: "a8666666-6666-4666-8666-666666666666",
+        template_version_id: "a8aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         assigned_admin_user_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
         priority: "normal",
         idempotency_key: randomUUID(),
@@ -439,6 +439,7 @@ test("public request becomes a verified publication through protected HTTP route
     const previewHtml = await preview.text();
     assert.equal(preview.status, 200);
     assert.match(previewHtml, /Restaurante HTTP Onboarding/);
+    assert.match(previewHtml, /editorial-story-title/);
     assert.match(previewHtml, /noindex/i);
 
     current = await pool.query(
@@ -509,6 +510,7 @@ test("public request becomes a verified publication through protected HTTP route
     const publicHtml = await publicPage.text();
     assert.equal(publicPage.status, 200);
     assert.match(publicHtml, /Restaurante HTTP Onboarding/);
+    assert.match(publicHtml, /editorial-story-title/);
     assert.doesNotMatch(publicHtml, /noindex/i);
     const closed = await pool.query(
       `SELECT case_record.status,

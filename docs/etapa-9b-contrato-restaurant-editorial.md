@@ -871,3 +871,36 @@ Editorial continúa fuera de selección, publicación normal, restauración y
 onboarding. También permanecen pendientes el aprovisionamiento productivo del
 catálogo, el proveedor multimedia productivo, staging y producción. La landing
 comercial sigue comunicando dos plantillas operativas.
+
+## S. Habilitación controlada 9B.4
+
+### Estado funcional
+
+**OPERATIVA EN LOCAL Y CI**
+
+Restaurante Editorial comparte la política centralizada de capacidades de
+Classic y Modern. Está habilitada para preview privado, selección por Cliente
+Administrador o Administrador nexi, publicación transaccional, restauración
+histórica y onboarding. La selección por sí sola no altera la publicación
+pública vigente.
+
+La habilitación conserva `restaurant.v2` y `restaurant_onboarding.v1` sin
+cambios de schema, migraciones ni dependencias. El catálogo determinista sigue
+ordenado como Classic, Modern y Editorial, con tres filas compatibles e
+idempotentes en local/CI.
+
+Las pruebas cubren autorización por rol y tenant, AAL2 administrativo,
+idempotencia, concurrencia optimista, publicación, restauración exacta con
+snapshot multimedia, invalidación de aprobación al cambiar plantilla y el flujo
+completo de onboarding con Editorial. La regresión de Vinext verifica que el
+patch aplicado conserva el rechazo explícito de dimensiones no verificables y
+no reintroduce `image-size` ni un fallback `0×0`.
+
+La validación visual local se repitió en 320×640, 375×812, 768×1024, 1280×800
+y 1600×900 CSS px. En las cinco resoluciones se verificaron imágenes cargadas,
+un único `h1`, navegación por anclas, foco visible, ausencia de enlaces de
+administración pública, ausencia de scroll horizontal y consola sin errores.
+
+Esta habilitación no aprovisiona proveedores productivos, staging ni
+producción, y no implica merge. El Pull Request #4 permanece en borrador hasta
+la revisión humana final.

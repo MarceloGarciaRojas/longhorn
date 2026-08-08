@@ -7,10 +7,7 @@ import {
   clientCompatibleTemplates,
   clientContentWorkspace,
 } from "@/src/content/service.server";
-import {
-  rendererIsPreviewOnly,
-  templateSelectionIsAllowed,
-} from "@/src/content/template-capabilities";
+import { templateSelectionIsAllowed } from "@/src/content/template-capabilities";
 import { ClientNotice, ClientPageHeader } from "../../../ui";
 
 export const dynamic = "force-dynamic";
@@ -50,9 +47,6 @@ export default async function TemplateCatalogPage({
               <h2>{option.displayName}</h2>
               <p>{option.description}</p>
               {selected ? <strong>Plantilla seleccionada</strong> : null}
-              {!selected && rendererIsPreviewOnly(option.rendererKey) ? (
-                <strong>Vista previa disponible · no seleccionable</strong>
-              ) : null}
               <div className="content-editor-actions">
                 <Link
                   className="client-button secondary"

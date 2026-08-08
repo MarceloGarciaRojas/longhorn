@@ -11,6 +11,7 @@ const SELECTABLE_RENDERERS = new Set<string>([
   RESTAURANT_RENDERER_KEY,
   RESTAURANT_CLASSIC_V2_RENDERER_KEY,
   RESTAURANT_MODERN_RENDERER_KEY,
+  RESTAURANT_EDITORIAL_RENDERER_KEY,
 ]);
 
 const PUBLISHABLE_RENDERERS = new Set(SELECTABLE_RENDERERS);
@@ -18,6 +19,7 @@ const PUBLISHABLE_RENDERERS = new Set(SELECTABLE_RENDERERS);
 const ONBOARDING_RENDERERS = new Set<string>([
   RESTAURANT_CLASSIC_V2_RENDERER_KEY,
   RESTAURANT_MODERN_RENDERER_KEY,
+  RESTAURANT_EDITORIAL_RENDERER_KEY,
 ]);
 
 const RESTAURANT_CATALOG_ORDER = new Map<string, number>([
@@ -50,8 +52,4 @@ export function templateCatalogOrder(
   const rightRank = RESTAURANT_CATALOG_ORDER.get(right.templateKey) ??
     Number.MAX_SAFE_INTEGER;
   return leftRank - rightRank || right.version - left.version;
-}
-
-export function rendererIsPreviewOnly(rendererKey: string): boolean {
-  return rendererKey === RESTAURANT_EDITORIAL_RENDERER_KEY;
 }

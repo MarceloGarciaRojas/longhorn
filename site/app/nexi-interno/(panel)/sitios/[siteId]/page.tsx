@@ -7,10 +7,7 @@ import {
   adminTemplateAssignment,
   adminTemplateOptions,
 } from "@/src/content/service.server";
-import {
-  rendererIsPreviewOnly,
-  templateSelectionIsAllowed,
-} from "@/src/content/template-capabilities";
+import { templateSelectionIsAllowed } from "@/src/content/template-capabilities";
 import { randomUUID } from "node:crypto";
 import {
   adminSite,
@@ -124,9 +121,6 @@ export default async function AdminSitePage({
                 >
                   Previsualizar {option.displayName}
                 </Link>
-                {rendererIsPreviewOnly(option.rendererKey) ? (
-                  <small>Vista previa disponible · no seleccionable</small>
-                ) : null}
               </div>
             ))}
           </div>

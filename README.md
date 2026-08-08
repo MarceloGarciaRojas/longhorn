@@ -10,8 +10,8 @@ Level Security, autenticación y sesiones opacas, los paneles administrativo y
 cliente, contenido estructurado `restaurant.v1/v2`, biblioteca multimedia
 local/CI y un onboarding operativo completo desde solicitud hasta publicación
 verificada. Otros rubros, proveedores productivos, pagos y tienda no están
-implementados. El catálogo actual tiene dos plantillas de restaurante; una
-tercera permanece pendiente como objetivo del MVP.
+implementados. El catálogo local/CI actual tiene tres plantillas de restaurante
+operativas: Classic, Modern y Restaurante Editorial.
 
 La aplicación ejecutable se encuentra en [`site/`](site/README.md).
 
