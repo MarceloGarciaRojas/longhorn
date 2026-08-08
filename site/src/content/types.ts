@@ -5,6 +5,8 @@ export const RESTAURANT_V2_SCHEMA_KEY = "restaurant.v2";
 export const RESTAURANT_V2_SCHEMA_VERSION = 2;
 export const RESTAURANT_CLASSIC_V2_RENDERER_KEY = "restaurant-classic-v2";
 export const RESTAURANT_MODERN_RENDERER_KEY = "restaurant-modern-v1";
+export const RESTAURANT_EDITORIAL_RENDERER_KEY = "restaurant-editorial-v1";
+export const RESTAURANT_EDITORIAL_TEMPLATE_KEY = "restaurant-editorial";
 
 export const RESTAURANT_DAYS = [
   "monday",

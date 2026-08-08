@@ -1,5 +1,6 @@
 import {
   RESTAURANT_CLASSIC_V2_RENDERER_KEY,
+  RESTAURANT_EDITORIAL_RENDERER_KEY,
   RESTAURANT_MODERN_RENDERER_KEY,
   RESTAURANT_RENDERER_KEY,
   RESTAURANT_SCHEMA_KEY,
@@ -21,23 +22,48 @@ export class UnknownRendererError extends Error {
   }
 }
 
-const RENDERER_MANIFEST: Readonly<Record<string, RendererDefinition>> = {
-  [RESTAURANT_RENDERER_KEY]: {
+export class DuplicateRendererError extends Error {
+  constructor(readonly rendererKey: string) {
+    super("renderer_key_duplicated");
+    this.name = "DuplicateRendererError";
+  }
+}
+
+export function createRendererManifest(
+  entries: ReadonlyArray<readonly [string, RendererDefinition]>,
+): Readonly<Record<string, RendererDefinition>> {
+  const manifest: Record<string, RendererDefinition> = {};
+  for (const [rendererKey, definition] of entries) {
+    if (Object.hasOwn(manifest, rendererKey)) {
+      throw new DuplicateRendererError(rendererKey);
+    }
+    manifest[rendererKey] = Object.freeze({ ...definition });
+  }
+  return Object.freeze(manifest);
+}
+
+const RENDERER_MANIFEST = createRendererManifest([
+  [RESTAURANT_RENDERER_KEY, {
     schemaKey: RESTAURANT_SCHEMA_KEY,
     minimumSchemaVersion: RESTAURANT_SCHEMA_VERSION,
     maximumSchemaVersion: RESTAURANT_SCHEMA_VERSION,
-  },
-  [RESTAURANT_CLASSIC_V2_RENDERER_KEY]: {
+  }],
+  [RESTAURANT_CLASSIC_V2_RENDERER_KEY, {
     schemaKey: RESTAURANT_V2_SCHEMA_KEY,
     minimumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
     maximumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
-  },
-  [RESTAURANT_MODERN_RENDERER_KEY]: {
+  }],
+  [RESTAURANT_MODERN_RENDERER_KEY, {
     schemaKey: RESTAURANT_V2_SCHEMA_KEY,
     minimumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
     maximumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
-  },
-};
+  }],
+  [RESTAURANT_EDITORIAL_RENDERER_KEY, {
+    schemaKey: RESTAURANT_V2_SCHEMA_KEY,
+    minimumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
+    maximumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
+  }],
+]);
 
 export function registeredRendererKeys(): string[] {
   return Object.keys(RENDERER_MANIFEST);

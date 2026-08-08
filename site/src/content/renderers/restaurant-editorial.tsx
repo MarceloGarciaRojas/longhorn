@@ -12,7 +12,7 @@ const resolveClassName: EditorialClassName = (token) =>
   styles[token as keyof typeof styles] ?? "";
 
 const NextEditorialImage: EditorialImageComponent = ({ alt, ...props }) => (
-  <Image {...props} alt={alt} />
+  <Image {...props} alt={alt} unoptimized />
 );
 
 export function RestaurantEditorialRenderer({

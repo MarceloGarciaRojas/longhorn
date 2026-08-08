@@ -4,13 +4,16 @@
 - **Marca visible:** nexi
 - **Versión del contrato:** 1
 - **Fecha:** 2026-08-04
+- **Última actualización técnica:** 2026-08-07
 - **Línea base:** `042261587df0bf8aeae04a49eea862d5de1e489b`
 - **Entornos autorizados:** local y CI
-- **Estado:** RENDERER IMPLEMENTADO, AÚN NO REGISTRADO
+- **Estado:** REGISTRADA Y PREVISUALIZABLE, NO SELECCIONABLE
 
-Este documento delimita la tercera plantilla de restaurante. No registra un
-renderer, no incorpora datos al catálogo, no modifica `restaurant.v2` y no hace
-que la plantilla esté disponible en los paneles o en sitios públicos.
+Este documento conserva el contrato original y registra su evolución hasta
+9B.3. Restaurante Editorial está registrada en local, test y CI, y puede
+previsualizarse en los paneles privados por usuarios autorizados. Continúa
+bloqueada para selección, publicación, restauración y onboarding; no modifica
+`restaurant.v2` ni la oferta comercial pública.
 
 ## A. Evidencia inspeccionada
 
@@ -70,7 +73,7 @@ históricos.
 | Activación | Opcional y explícita |
 | Selección automática | Prohibida |
 | Entornos | Local y CI |
-| Estado | Contrato aprobado para implementación posterior; implementación pendiente |
+| Estado | Registrada y previsualizable; selección, publicación y onboarding bloqueados |
 
 Las claves son identificadores estables. Una evolución incompatible del diseño
 debe usar una nueva versión del renderer o de la plantilla; no debe cambiar
@@ -779,3 +782,92 @@ Las pruebas directas cubren:
 - Continúan la vulnerabilidad moderada conocida de PostCSS, las seis
   advertencias heredadas `no-img-element` y la ausencia de proveedor multimedia
   productivo.
+
+## R. Registro controlado y preview 9B.3
+
+### Estado funcional
+
+**REGISTRADA Y PREVISUALIZABLE, NO SELECCIONABLE**
+
+### Registry, catálogo y seed
+
+- `site/src/content/renderer-manifest.ts` registra de forma cerrada
+  `restaurant-editorial-v1`, exclusivamente para `restaurant.v2` versión 2, y
+  rechaza claves duplicadas.
+- `site/src/content/renderer-registry.tsx` resuelve Editorial sin fallback,
+  aplica el validador vigente y conserva el error explícito para renderers
+  desconocidos.
+- `site/src/content/template-capabilities.ts` separa de forma centralizada las
+  capacidades de preview, selección, publicación y onboarding. Editorial solo
+  tiene preview habilitado en este bloque.
+- `site/scripts/db/seed.ts` incorpora datos deterministas e idempotentes para
+  local y CI: template `a8999999-9999-4999-8999-999999999999`, versión
+  `a8aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`, template key
+  `restaurant-editorial`, renderer `restaurant-editorial-v1`, versión de
+  plantilla 1 y esquema `restaurant.v2` versión 2.
+- El orden compatible permanece Classic, Modern y Editorial. Las filas de
+  Editorial usan estado activo para atravesar el filtro RLS vigente del
+  catálogo privado; la disponibilidad funcional no se deriva de ese estado,
+  sino de la política de capacidades server-side.
+- No se crearon migraciones, no se cambiaron identificadores existentes y el
+  seed repetido conserva exactamente tres plantillas compatibles sin duplicar
+  filas ni asignar Editorial a un sitio.
+
+### Preview y controles de acceso
+
+- El Administrador nexi usa la ruta privada existente
+  `/nexi-interno/sitios/:siteId/plantillas/:templateVersionId/preview`; requiere
+  sesión administrativa, permiso, tenant resuelto en servidor y AAL2 conforme a
+  la infraestructura vigente.
+- El Cliente Administrador usa
+  `/cuenta/sitios/:siteId/plantillas/:templateVersionId/preview`; requiere
+  sesión, membresía y acceso al sitio del tenant derivado por el servidor.
+- Ambos paneles muestran “Vista previa disponible · no seleccionable”. El
+  formulario de selección no incluye Editorial y las operaciones directas de
+  cliente y administrador la rechazan en backend.
+- Publicación transaccional, restauración y conversión de onboarding aplican la
+  misma política explícita y rechazan Editorial. No se crean revisiones,
+  publicaciones, aprobaciones ni recursos de onboarding al intentar evadir el
+  bloqueo.
+- El preview consume solo contenido `restaurant.v2` validado y un manifiesto de
+  medios privados autorizado por tenant/sitio. Un visitante, un usuario sin
+  membresía, un UUID cruzado o multimedia de otro tenant no obtienen acceso.
+
+### Evidencia visual local
+
+La comprobación se ejecutó con tenant, usuarios, contenido y medios sintéticos,
+sin rutas públicas ni datos reales. Se revisaron 320×640, 375×812, 768×1024,
+1280×800 y 1600×900 CSS px.
+
+La matriz incluyó hero con medio horizontal, hero con fuente vertical de
+600×900, hero sin imagen, historia de 1.013 caracteres, varias categorías,
+categoría vacía omitida con seguridad, productos con y sin precio, galería con
+medios horizontal y vertical, ausencia de galería, horarios completos y
+parciales, redes sociales presentes y ausentes, textos largos y carga diferida
+de imágenes. En todos los tamaños se confirmaron un único `h1`, jerarquía de
+encabezados, landmarks, alt en contenido informativo, foco visible de 3 px,
+navegación por teclado, contraste legible y ausencia de scroll horizontal.
+
+La inspección encontró y corrigió dos defectos acotados en
+`restaurant-editorial.module.css`: el título del hero se fragmentaba en una
+columna estrecha de escritorio y la tarjeta de plato activaba tres columnas
+demasiado pronto en tablet. El tamaño del título y su wrapping quedaron
+acotados desde 900 px, y la composición de plato de tres columnas se reservó
+para ese mismo breakpoint. La repetición visual aprobó ambos casos sin overflow.
+
+Las capturas y el contenido alternativo fueron temporales, permanecieron fuera
+de Git, no contienen datos reales y se eliminan al cerrar la validación. El
+seed canónico restaura el estado local antes de ejecutar las suites completas.
+
+### Pruebas y limitaciones
+
+Las pruebas cubren registro y duplicados, esquema incompatible, renderer
+desconocido, orden e idempotencia del catálogo, preview privado de ambos roles,
+AAL2, tenant cruzado, multimedia privada, bloqueo directo de selección,
+publicación, restauración y onboarding, además de la regresión de Classic y
+Modern.
+
+Editorial continúa fuera de selección, publicación normal, restauración y
+onboarding. También permanecen pendientes el aprovisionamiento productivo del
+catálogo, el proveedor multimedia productivo, staging y producción. La landing
+comercial sigue comunicando dos plantillas operativas.

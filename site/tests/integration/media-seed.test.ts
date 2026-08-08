@@ -104,6 +104,47 @@ async function webpCount(storage: LocalObjectStorage): Promise<number> {
 test("media seed is isolated, transactional and idempotent", async (t) => {
   process.env.APP_ENV = "test";
 
+  await t.test("canonical template seed registers exactly three v2 options idempotently", async () => {
+    await resetCanonical();
+    const catalog = async () => withPool(async (pool) => {
+      const result = await pool.query<{
+        id: string;
+        key: string;
+        rendererKey: string;
+      }>(
+        `SELECT version.id,template.key,
+           version.renderer_key AS "rendererKey"
+         FROM public.template_versions version
+         JOIN public.templates template ON template.id=version.template_id
+         WHERE version.content_schema_key='restaurant.v2'
+           AND version.minimum_schema_version<=2
+           AND version.maximum_schema_version>=2
+         ORDER BY CASE template.key
+           WHEN 'restaurant-classic' THEN 1
+           WHEN 'restaurant-modern' THEN 2
+           WHEN 'restaurant-editorial' THEN 3
+           ELSE 99 END`,
+      );
+      return result.rows;
+    });
+    const first = await catalog();
+    await seedSyntheticData(migrationUrl);
+    const second = await catalog();
+    assert.deepEqual(second, first);
+    assert.deepEqual(
+      first.map(({ key, rendererKey }) => ({ key, rendererKey })),
+      [
+        { key: "restaurant-classic", rendererKey: "restaurant-classic-v2" },
+        { key: "restaurant-modern", rendererKey: "restaurant-modern-v1" },
+        { key: "restaurant-editorial", rendererKey: "restaurant-editorial-v1" },
+      ],
+    );
+    assert.equal(
+      first[2]?.id,
+      SYNTHETIC_DATA.templateRestaurantEditorialV1.id,
+    );
+  });
+
   await t.test("archived target fails before any partial change", async () => {
     await resetCanonical();
     await withPool((pool) =>

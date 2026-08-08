@@ -14,6 +14,7 @@ import {
 import { readDatabaseUrl } from "../../src/db/config";
 import { createDatabasePool } from "../../src/db/pool";
 import {
+  adminOnboardingOptions,
   adminCase,
   clientOnboarding,
   convertIntake,
@@ -228,6 +229,14 @@ test("Etapa 9A completes an isolated, revision-bound onboarding flow", async (t)
     activeTenantId: SYNTHETIC_DATA.tenantA.id,
     activeTenantName: SYNTHETIC_DATA.tenantA.displayName,
   });
+  const onboardingOptions = await adminOnboardingOptions(admin);
+  assert.equal(
+    onboardingOptions.templates.some(
+      (template) =>
+        template.id === SYNTHETIC_DATA.templateRestaurantEditorialV1.id,
+    ),
+    false,
+  );
 
   const before = await migrationPool.query<{
     tenants: number;
@@ -372,6 +381,48 @@ test("Etapa 9A completes an isolated, revision-bound onboarding flow", async (t)
     priority: "normal",
     idempotency_key: randomUUID(),
   });
+  const beforeEditorialAttempt = await migrationPool.query<{
+    tenants: number;
+    sites: number;
+    cases: number;
+  }>(
+    `SELECT
+       (SELECT count(*)::int FROM public.tenants) AS tenants,
+       (SELECT count(*)::int FROM public.sites) AS sites,
+       (SELECT count(*)::int FROM public.onboarding_cases) AS cases`,
+  );
+  await assert.rejects(
+    convertIntake(
+      admin,
+      form({
+        intake_id: failureIntakeId,
+        tenant_id: "",
+        tenant_slug: "restaurante-editorial-bloqueado",
+        site_slug: "restaurante-editorial-bloqueado",
+        plan_id: SYNTHETIC_DATA.planEssential.id,
+        template_version_id:
+          SYNTHETIC_DATA.templateRestaurantEditorialV1.id,
+        assigned_admin_user_id: SYNTHETIC_DATA.userAdmin.id,
+        priority: "normal",
+        idempotency_key: randomUUID(),
+      }),
+      "onboarding-editorial-blocked",
+    ),
+    onboardingError("unsupported"),
+  );
+  assert.deepEqual(
+    (await migrationPool.query<{
+      tenants: number;
+      sites: number;
+      cases: number;
+    }>(
+      `SELECT
+         (SELECT count(*)::int FROM public.tenants) AS tenants,
+         (SELECT count(*)::int FROM public.sites) AS sites,
+         (SELECT count(*)::int FROM public.onboarding_cases) AS cases`,
+    )).rows[0],
+    beforeEditorialAttempt.rows[0],
+  );
   await assert.rejects(
     convertIntake(
       admin,

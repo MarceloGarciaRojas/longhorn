@@ -394,7 +394,7 @@ test("editorial only renders referenced media from safe internal manifest paths"
   assert.match(text, /Restaurante Sintético/);
 });
 
-test("editorial remains isolated from the active manifest and contains no fixed commerce data", () => {
+test("editorial is registered only for restaurant.v2 and contains no fixed commerce data", () => {
   const source = readFileSync(
     new URL(
       "../../src/content/renderers/restaurant-editorial-view.tsx",
@@ -402,9 +402,19 @@ test("editorial remains isolated from the active manifest and contains no fixed 
     ),
     "utf8",
   );
-  assert.equal(registeredRendererKeys().includes("restaurant-editorial-v1"), false);
+  const keys = registeredRendererKeys();
+  assert.equal(keys.includes("restaurant-editorial-v1"), true);
+  assert.equal(new Set(keys).size, keys.length);
   assert.equal(
     rendererIsCompatible("restaurant-editorial-v1", "restaurant.v2", 2),
+    true,
+  );
+  assert.equal(
+    rendererIsCompatible("restaurant-editorial-v1", "restaurant.v1", 1),
+    false,
+  );
+  assert.equal(
+    rendererIsCompatible("restaurant-editorial-v1", "restaurant.v2", 3),
     false,
   );
   assert.doesNotMatch(source, /Restaurante Sintético|Avenida Demostración|\$0 demostrativo/);

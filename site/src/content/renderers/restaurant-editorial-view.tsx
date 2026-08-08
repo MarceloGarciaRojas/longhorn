@@ -6,6 +6,7 @@ import type {
 } from "@/src/media/types";
 import { validateRestaurantV2Content } from "../restaurant-v2-schema";
 import {
+  RESTAURANT_EDITORIAL_RENDERER_KEY,
   RESTAURANT_V2_SCHEMA_KEY,
   RESTAURANT_V2_SCHEMA_VERSION,
   type RestaurantContentV2,
@@ -14,7 +15,7 @@ import {
 } from "../types";
 
 export const RESTAURANT_EDITORIAL_RENDERER_CONTRACT = Object.freeze({
-  rendererKey: "restaurant-editorial-v1",
+  rendererKey: RESTAURANT_EDITORIAL_RENDERER_KEY,
   schemaKey: RESTAURANT_V2_SCHEMA_KEY,
   schemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
 });

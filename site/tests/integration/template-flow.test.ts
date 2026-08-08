@@ -5,13 +5,19 @@ import { createAuthSession } from "../../src/auth/auth-repository.server";
 import { createSessionToken, hashSessionToken } from "../../src/auth/security";
 import type { AuthSession } from "../../src/auth/types";
 import {
+  adminAssignTemplate,
   adminPreviewAlternativeTemplate,
   clientChangeTemplate,
   clientCompatibleTemplates,
   clientContentWorkspace,
   clientPreviewAlternativeTemplate,
+  publishContentTransaction,
   resolvePublicSite,
 } from "../../src/content/service.server";
+import { rendererPublicationIsAllowed } from "../../src/content/template-capabilities";
+import { readDatabaseUrl } from "../../src/db/config";
+import { createDatabasePool } from "../../src/db/pool";
+import { OperationValidationError } from "../../src/operations/validation";
 import { SYNTHETIC_DATA } from "../../scripts/db/seed";
 
 const clientB: AuthSession = {
@@ -71,15 +77,30 @@ test("alternative preview and selection preserve current public publication", as
   assert.equal(before?.rendererKey, "restaurant-classic-v1");
   const catalog = await clientCompatibleTemplates(clientB, SYNTHETIC_DATA.siteB.id);
   assert.ok(catalog);
-  assert.equal(catalog.options.length, 2);
+  assert.equal(catalog.options.length, 3);
+  assert.deepEqual(
+    catalog.options.map((option) => option.templateKey),
+    ["restaurant-classic", "restaurant-modern", "restaurant-editorial"],
+  );
   const modern = catalog.options.find((option) => option.rendererKey === "restaurant-modern-v1");
+  const editorial = catalog.options.find(
+    (option) => option.rendererKey === "restaurant-editorial-v1",
+  );
   assert.ok(modern);
+  assert.ok(editorial);
   const preview = await clientPreviewAlternativeTemplate(
     clientB,
     SYNTHETIC_DATA.siteB.id,
     modern.id,
   );
   assert.equal(preview?.option.id, modern.id);
+  const editorialPreview = await clientPreviewAlternativeTemplate(
+    clientB,
+    SYNTHETIC_DATA.siteB.id,
+    editorial.id,
+  );
+  assert.equal(editorialPreview?.option.id, editorial.id);
+  assert.equal(editorialPreview?.draft.schemaKey, "restaurant.v2");
   const nexiAdmin = await createAdminFixture();
   const adminPreview = await adminPreviewAlternativeTemplate(
     nexiAdmin,
@@ -87,6 +108,20 @@ test("alternative preview and selection preserve current public publication", as
     modern.id,
   );
   assert.equal(adminPreview?.option.id, modern.id);
+  const editorialAdminPreview = await adminPreviewAlternativeTemplate(
+    nexiAdmin,
+    SYNTHETIC_DATA.siteB.id,
+    editorial.id,
+  );
+  assert.equal(editorialAdminPreview?.option.id, editorial.id);
+  await assert.rejects(
+    adminPreviewAlternativeTemplate(
+      { ...nexiAdmin, assuranceLevel: "aal1" },
+      SYNTHETIC_DATA.siteB.id,
+      editorial.id,
+    ),
+    (error: unknown) => (error as { code?: string }).code === "42501",
+  );
   assert.equal(
     await adminPreviewAlternativeTemplate(
       nexiAdmin,
@@ -101,6 +136,51 @@ test("alternative preview and selection preserve current public publication", as
 
   const workspace = await clientContentWorkspace(clientB, SYNTHETIC_DATA.siteB.id);
   assert.ok(workspace?.assignment);
+  const unchangedBefore = {
+    templateVersionId: workspace.assignment.templateVersionId,
+    assignmentVersion: workspace.assignment.version,
+    publicationId: before?.publicationId,
+  };
+  await assert.rejects(
+    clientChangeTemplate(
+      clientB,
+      changeForm(
+        SYNTHETIC_DATA.siteB.id,
+        editorial.id,
+        workspace.assignment.version,
+      ),
+      "template-editorial-direct-client",
+    ),
+    (error: unknown) =>
+      error instanceof OperationValidationError && error.code === "denied",
+  );
+  await assert.rejects(
+    adminAssignTemplate(
+      nexiAdmin,
+      changeForm(
+        SYNTHETIC_DATA.siteB.id,
+        editorial.id,
+        workspace.assignment.version,
+      ),
+      "template-editorial-direct-admin",
+    ),
+    (error: unknown) =>
+      error instanceof OperationValidationError && error.code === "denied",
+  );
+  const unchangedAfter = await clientContentWorkspace(
+    clientB,
+    SYNTHETIC_DATA.siteB.id,
+  );
+  assert.deepEqual(
+    {
+      templateVersionId: unchangedAfter?.assignment?.templateVersionId,
+      assignmentVersion: unchangedAfter?.assignment?.version,
+      publicationId: (await resolvePublicSite({
+        siteSlug: SYNTHETIC_DATA.siteB.slug,
+      }))?.publicationId,
+    },
+    unchangedBefore,
+  );
   await clientChangeTemplate(
     clientB,
     changeForm(SYNTHETIC_DATA.siteB.id, modern.id, workspace.assignment.version),
@@ -120,6 +200,58 @@ test("alternative preview and selection preserve current public publication", as
     changeForm(SYNTHETIC_DATA.siteB.id, classic.id, changed!.assignment!.version),
     "template-change-revert-test",
   );
+
+  assert.equal(rendererPublicationIsAllowed(editorial.rendererKey), false);
+  const pool = createDatabasePool({
+    connectionString: readDatabaseUrl("migration"),
+    applicationName: "nexi-template-negative-publication",
+    maxConnections: 1,
+  });
+  const database = await pool.connect();
+  try {
+    await database.query("BEGIN");
+    await database.query(
+      `UPDATE public.site_template_assignments
+       SET template_version_id=$2,idempotency_key=$3,
+         assigned_by_user_id=$4
+       WHERE site_id=$1`,
+      [
+        SYNTHETIC_DATA.siteB.id,
+        editorial.id,
+        randomUUID(),
+        SYNTHETIC_DATA.userB.id,
+      ],
+    );
+    const draft = await database.query<{ revision: number }>(
+      `SELECT revision FROM public.site_content_drafts WHERE site_id=$1`,
+      [SYNTHETIC_DATA.siteB.id],
+    );
+    const publicationCount = await database.query<{ count: number }>(
+      `SELECT count(*)::int AS count
+       FROM public.site_content_publications WHERE site_id=$1`,
+      [SYNTHETIC_DATA.siteB.id],
+    );
+    const result = await publishContentTransaction(database, {
+      tenantId: SYNTHETIC_DATA.tenantB.id,
+      actorUserId: SYNTHETIC_DATA.userB.id,
+      siteId: SYNTHETIC_DATA.siteB.id,
+      expectedRevision: draft.rows[0].revision,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(result.rejected, "renderer");
+    assert.equal(
+      (await database.query<{ count: number }>(
+        `SELECT count(*)::int AS count
+         FROM public.site_content_publications WHERE site_id=$1`,
+        [SYNTHETIC_DATA.siteB.id],
+      )).rows[0].count,
+      publicationCount.rows[0].count,
+    );
+    await database.query("ROLLBACK");
+  } finally {
+    database.release();
+    await pool.end();
+  }
 });
 
 test("another tenant cannot list or preview templates for the site", async () => {
@@ -138,7 +270,7 @@ test("another tenant cannot list or preview templates for the site", async () =>
     await clientPreviewAlternativeTemplate(
       foreign,
       SYNTHETIC_DATA.siteB.id,
-      SYNTHETIC_DATA.templateRestaurantModernV1.id,
+      SYNTHETIC_DATA.templateRestaurantEditorialV1.id,
     ),
     null,
   );

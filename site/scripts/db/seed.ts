@@ -3,7 +3,11 @@ import {
   emptyRestaurantContent,
   validateRestaurantContent,
 } from "../../src/content/restaurant-schema";
-import type { RestaurantContent } from "../../src/content/types";
+import {
+  RESTAURANT_EDITORIAL_RENDERER_KEY,
+  RESTAURANT_EDITORIAL_TEMPLATE_KEY,
+  type RestaurantContent,
+} from "../../src/content/types";
 
 export const SYNTHETIC_DATA = {
   tenantA: {
@@ -162,6 +166,16 @@ export const SYNTHETIC_DATA = {
     id: "a8888888-8888-4888-8888-888888888888",
     version: 1,
     rendererKey: "restaurant-modern-v1",
+  },
+  templateRestaurantEditorial: {
+    id: "a8999999-9999-4999-8999-999999999999",
+    key: RESTAURANT_EDITORIAL_TEMPLATE_KEY,
+    displayName: "Restaurante Editorial",
+  },
+  templateRestaurantEditorialV1: {
+    id: "a8aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    version: 1,
+    rendererKey: RESTAURANT_EDITORIAL_RENDERER_KEY,
   },
 } as const;
 
@@ -610,6 +624,20 @@ export async function seedSyntheticData(
       ],
     );
     await client.query(
+      `INSERT INTO public.templates(
+         id,key,display_name,industry_key,status,description
+       ) VALUES($1,$2,$3,'restaurant','active',
+         'Composición editorial para previsualizar el mismo contenido estructurado de restaurante.')
+       ON CONFLICT(id) DO UPDATE SET key=EXCLUDED.key,
+         display_name=EXCLUDED.display_name,industry_key='restaurant',
+         status='active',description=EXCLUDED.description`,
+      [
+        data.templateRestaurantEditorial.id,
+        data.templateRestaurantEditorial.key,
+        data.templateRestaurantEditorial.displayName,
+      ],
+    );
+    await client.query(
       `INSERT INTO public.template_versions(
          id,template_id,version,renderer_key,content_schema_key,
          minimum_schema_version,maximum_schema_version,status,released_at,preview_key
@@ -647,6 +675,23 @@ export async function seedSyntheticData(
         data.templateRestaurantModern.id,
         data.templateRestaurantModernV1.version,
         data.templateRestaurantModernV1.rendererKey,
+      ],
+    );
+    await client.query(
+      `INSERT INTO public.template_versions(
+         id,template_id,version,renderer_key,content_schema_key,
+         minimum_schema_version,maximum_schema_version,status,released_at,preview_key
+       ) VALUES($1,$2,$3,$4,'restaurant.v2',2,2,'active',NULL,'restaurant-editorial')
+       ON CONFLICT(id) DO UPDATE SET
+         template_id=EXCLUDED.template_id,version=EXCLUDED.version,
+         renderer_key=EXCLUDED.renderer_key,content_schema_key='restaurant.v2',
+         minimum_schema_version=2,maximum_schema_version=2,status='active',
+         released_at=NULL,preview_key='restaurant-editorial'`,
+      [
+        data.templateRestaurantEditorialV1.id,
+        data.templateRestaurantEditorial.id,
+        data.templateRestaurantEditorialV1.version,
+        data.templateRestaurantEditorialV1.rendererKey,
       ],
     );
     await client.query(

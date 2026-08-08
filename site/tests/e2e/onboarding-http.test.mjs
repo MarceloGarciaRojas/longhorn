@@ -5,7 +5,7 @@ import test from "node:test";
 import pg from "pg";
 
 const { Pool } = pg;
-const port = 33_400 + Math.floor(Math.random() * 300);
+const port = 33_700 + Math.floor(Math.random() * 300);
 const baseUrl = `http://127.0.0.1:${port}`;
 const adminPassword = randomBytes(24).toString("base64url");
 const clientPassword = randomBytes(24).toString("base64url");
@@ -14,6 +14,17 @@ const clientEmail = `onboarding.${randomBytes(5).toString("hex")}@example.invali
 const clientSubject = `test-onboarding-${randomBytes(8).toString("hex")}`;
 const businessSlug = `restaurante-onboarding-${randomBytes(4).toString("hex")}`;
 let server;
+let serverError;
+let serverOutput = "";
+
+function captureServerOutput(chunk) {
+  serverOutput = `${serverOutput}${chunk}`.slice(-4_000);
+}
+
+function serverDiagnostic() {
+  const output = serverOutput.trim();
+  return output ? `\nServer output:\n${output}` : "";
+}
 
 function cookieFrom(response) {
   const match = /nexi_session=([^;]+)/.exec(
@@ -26,6 +37,16 @@ function cookieFrom(response) {
 async function waitUntilReady() {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
+    if (serverError) {
+      throw new Error(
+        `onboarding E2E server failed to start: ${serverError.message}${serverDiagnostic()}`,
+      );
+    }
+    if (server.exitCode !== null) {
+      throw new Error(
+        `onboarding E2E server exited with code ${server.exitCode}${serverDiagnostic()}`,
+      );
+    }
     try {
       if ((await fetch(`${baseUrl}/api/health`)).ok) return;
     } catch {
@@ -33,7 +54,7 @@ async function waitUntilReady() {
     }
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
-  throw new Error("onboarding E2E server did not start");
+  throw new Error(`onboarding E2E server did not start${serverDiagnostic()}`);
 }
 
 async function post(path, values, cookie, origin = baseUrl) {
@@ -205,6 +226,11 @@ test.before(async () => {
       windowsHide: true,
     },
   );
+  server.stdout.on("data", captureServerOutput);
+  server.stderr.on("data", captureServerOutput);
+  server.on("error", (error) => {
+    serverError = error;
+  });
   await waitUntilReady();
 });
 

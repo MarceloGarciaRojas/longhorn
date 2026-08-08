@@ -546,17 +546,6 @@
     justify-content: flex-end;
   }
 
-  .dish {
-    grid-template-columns: minmax(9rem, 0.34fr) 1fr auto;
-    align-items: center;
-  }
-
-  .dishImage {
-    grid-column: auto;
-    max-height: 11rem;
-    aspect-ratio: 4 / 3;
-  }
-
   .gallery {
     grid-template-columns: 1fr 1fr;
   }
@@ -580,6 +569,26 @@
   .hero {
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
     min-height: min(82vh, 58rem);
+  }
+
+  .heroCopy {
+    padding-inline: clamp(2rem, 4vw, 4rem);
+  }
+
+  .hero h1 {
+    overflow-wrap: normal;
+    font-size: clamp(3.25rem, 5vw, 4.5rem);
+  }
+
+  .dish {
+    grid-template-columns: minmax(9rem, 0.34fr) 1fr auto;
+    align-items: center;
+  }
+
+  .dishImage {
+    grid-column: auto;
+    max-height: 11rem;
+    aspect-ratio: 4 / 3;
   }
 
   .heroFigure,

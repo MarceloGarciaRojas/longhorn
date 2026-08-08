@@ -1,14 +1,17 @@
 import type { ReactNode } from "react";
 import { RestaurantClassicRenderer } from "./renderers/restaurant-classic";
+import { RestaurantEditorialRenderer } from "./renderers/restaurant-editorial";
 import { RestaurantMediaRenderer } from "./renderers/restaurant-media";
 import {
   requireCompatibleRenderer,
+  UnknownRendererError,
 } from "./renderer-manifest";
 import { validateRestaurantContent } from "./restaurant-schema";
 import { validateRestaurantV2Content } from "./restaurant-v2-schema";
 import type { MediaRenderManifest } from "@/src/media/types";
 import {
   RESTAURANT_CLASSIC_V2_RENDERER_KEY,
+  RESTAURANT_EDITORIAL_RENDERER_KEY,
   RESTAURANT_MODERN_RENDERER_KEY,
   RESTAURANT_RENDERER_KEY,
   RESTAURANT_SCHEMA_KEY,
@@ -73,6 +76,25 @@ const REGISTRY = {
       );
     },
   },
+  [RESTAURANT_EDITORIAL_RENDERER_KEY]: {
+    schemaKey: RESTAURANT_V2_SCHEMA_KEY,
+    minimumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
+    maximumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
+    render(
+      content: unknown,
+      preview: boolean,
+      validationMode: "draft" | "publication",
+      media: MediaRenderManifest,
+    ): ReactNode {
+      return (
+        <RestaurantEditorialRenderer
+          content={validateRestaurantV2Content(content, validationMode)}
+          media={media}
+          preview={preview}
+        />
+      );
+    },
+  },
 } as const;
 
 export function renderRegisteredTemplate(input: {
@@ -86,6 +108,7 @@ export function renderRegisteredTemplate(input: {
 }): ReactNode {
   requireCompatibleRenderer(input.rendererKey, input.schemaKey, input.schemaVersion);
   const renderer = REGISTRY[input.rendererKey as keyof typeof REGISTRY];
+  if (!renderer) throw new UnknownRendererError(input.rendererKey);
   return renderer.render(
     input.content,
     input.preview === true,
