@@ -22,6 +22,7 @@ export default async function ContentPreviewPage({
   if (!preview) notFound();
   return renderRegisteredTemplate({
     rendererKey: preview.assignment.rendererKey,
+    industryKey: preview.assignment.industryKey,
     schemaKey: preview.draft.schemaKey,
     schemaVersion: preview.draft.schemaVersion,
     content: preview.draft.content,

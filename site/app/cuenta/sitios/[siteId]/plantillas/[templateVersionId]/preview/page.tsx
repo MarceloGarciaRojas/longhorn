@@ -25,6 +25,7 @@ export default async function AlternativeTemplatePreview({
   if (!preview) notFound();
   return renderRegisteredTemplate({
     rendererKey: preview.option.rendererKey,
+    industryKey: preview.option.industryKey,
     schemaKey: preview.draft.schemaKey,
     schemaVersion: preview.draft.schemaVersion,
     content: preview.draft.content,

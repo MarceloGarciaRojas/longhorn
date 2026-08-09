@@ -197,6 +197,10 @@ test("Etapa 7B operations remain tenant-safe, auditable and reversible", async (
       ]),
       (error: unknown) => (error as { code?: string }).code === "42501",
     );
+    await assert.rejects(
+      appPool.query("UPDATE public.sites SET industry_key='gym' WHERE id=$1", [siteId]),
+      (error: unknown) => (error as { code?: string }).code === "42501",
+    );
   });
 
   await t.test("client site reads are isolated by active tenant and UUID", async () => {

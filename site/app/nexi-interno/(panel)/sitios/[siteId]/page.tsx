@@ -29,7 +29,7 @@ export default async function AdminSitePage({
     adminSite(session, siteId),
     adminSiteDomains(session, siteId),
     adminSiteActivity(session, siteId),
-    adminTemplateOptions(session),
+    adminTemplateOptions(session, siteId),
     adminTemplateAssignment(session, siteId),
     adminContentDraftState(session, siteId),
     searchParams,

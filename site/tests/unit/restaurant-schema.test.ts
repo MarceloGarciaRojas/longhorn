@@ -174,26 +174,33 @@ test("restaurant.v1 rejects oversized serialized payloads and limits", () => {
 
 test("renderer registry is explicit and rejects unknown or incompatible keys", () => {
   assert.equal(
-    rendererIsCompatible(RESTAURANT_RENDERER_KEY, RESTAURANT_SCHEMA_KEY, 1),
+    rendererIsCompatible(RESTAURANT_RENDERER_KEY, "restaurant", RESTAURANT_SCHEMA_KEY, 1),
     true,
   );
   assert.equal(
-    rendererIsCompatible("unknown-renderer", RESTAURANT_SCHEMA_KEY, 1),
+    rendererIsCompatible("unknown-renderer", "restaurant", RESTAURANT_SCHEMA_KEY, 1),
     false,
   );
   assert.throws(
     () =>
-      requireCompatibleRenderer("unknown-renderer", RESTAURANT_SCHEMA_KEY, 1),
+      requireCompatibleRenderer(
+        "unknown-renderer",
+        "restaurant",
+        RESTAURANT_SCHEMA_KEY,
+        1,
+      ),
     UnknownRendererError,
   );
   assert.throws(
     () => createRendererManifest([
       ["duplicated-renderer", {
+        industryKey: "restaurant",
         schemaKey: RESTAURANT_SCHEMA_KEY,
         minimumSchemaVersion: 1,
         maximumSchemaVersion: 1,
       }],
       ["duplicated-renderer", {
+        industryKey: "restaurant",
         schemaKey: RESTAURANT_SCHEMA_KEY,
         minimumSchemaVersion: 1,
         maximumSchemaVersion: 1,

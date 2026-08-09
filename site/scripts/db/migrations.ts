@@ -192,3 +192,32 @@ export async function rollbackAllMigrations(
     return rolledBack;
   });
 }
+
+export async function rollbackLatestMigration(
+  connectionString: string,
+): Promise<string | null> {
+  const migrations = (await readMigrations()).reverse();
+
+  return withMigrationClient(connectionString, async (client) => {
+    const appliedRows = await client.query<{ version: string }>(
+      "SELECT version FROM nexi_internal.schema_migrations",
+    );
+    const applied = new Set(appliedRows.rows.map((row) => row.version));
+    const migration = migrations.find((candidate) => applied.has(candidate.version));
+    if (!migration) return null;
+
+    await client.query("BEGIN");
+    try {
+      await client.query(migration.downSql);
+      await client.query(
+        "DELETE FROM nexi_internal.schema_migrations WHERE version=$1",
+        [migration.version],
+      );
+      await client.query("COMMIT");
+      return migration.version;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+}

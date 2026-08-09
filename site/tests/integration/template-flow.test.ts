@@ -159,8 +159,8 @@ test("Editorial is selectable, publishable and historically restorable through s
     assert.ok(modern);
     assert.ok(editorial);
     assert.equal(templateSelectionIsAllowed(editorial), true);
-    assert.equal(rendererPublicationIsAllowed(editorial.rendererKey), true);
-    assert.equal(rendererOnboardingIsAllowed(editorial.rendererKey), true);
+    assert.equal(rendererPublicationIsAllowed(editorial.rendererKey, "restaurant"), true);
+    assert.equal(rendererOnboardingIsAllowed(editorial.rendererKey, "restaurant"), true);
 
     const clientPreview = await clientPreviewAlternativeTemplate(
       clientB,
@@ -468,4 +468,27 @@ test("another tenant cannot list, preview or select templates for the site", asy
     (error: unknown) =>
       error instanceof OperationValidationError && error.code === "not_found",
   );
+});
+
+test("a Gym site has no selectable templates before gym.v1 exists", async () => {
+  const pool = createDatabasePool({
+    connectionString: readDatabaseUrl("migration"),
+    applicationName: "nexi-gym-empty-catalog",
+    maxConnections: 1,
+  });
+  const gymSiteId = "76666666-6666-4666-8666-766666666667";
+  try {
+    await pool.query(
+      `INSERT INTO public.sites(id,tenant_id,display_name,slug,industry_key)
+       VALUES($1,$2,'Gym sin plantilla','gym-sin-plantilla','gym')`,
+      [gymSiteId, SYNTHETIC_DATA.tenantB.id],
+    );
+    const catalog = await clientCompatibleTemplates(clientB, gymSiteId);
+    assert.ok(catalog);
+    assert.equal(catalog.currentTemplateVersionId, null);
+    assert.deepEqual(catalog.options, []);
+  } finally {
+    await pool.query("DELETE FROM public.sites WHERE id=$1", [gymSiteId]);
+    await pool.end();
+  }
 });

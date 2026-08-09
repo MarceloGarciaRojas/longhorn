@@ -1,3 +1,5 @@
+import type { IndustryKey } from "./industry";
+
 export const RESTAURANT_SCHEMA_KEY = "restaurant.v1";
 export const RESTAURANT_SCHEMA_VERSION = 1;
 export const RESTAURANT_RENDERER_KEY = "restaurant-classic-v1";
@@ -127,12 +129,30 @@ export interface RestaurantContentV2
 
 export type RestaurantAnyContent = RestaurantContent | RestaurantContentV2;
 
+export interface ContentSchemaTypeMap {
+  [RESTAURANT_SCHEMA_KEY]: RestaurantContent;
+  [RESTAURANT_V2_SCHEMA_KEY]: RestaurantContentV2;
+}
+
+export type RegisteredContentSchemaKey = keyof ContentSchemaTypeMap;
+export type RegisteredContent = ContentSchemaTypeMap[RegisteredContentSchemaKey];
+
+export type RegisteredContentDocument = {
+  [SchemaKey in RegisteredContentSchemaKey]: {
+    industryKey: "restaurant";
+    schemaKey: SchemaKey;
+    schemaVersion: SchemaKey extends typeof RESTAURANT_SCHEMA_KEY ? 1 : 2;
+    content: ContentSchemaTypeMap[SchemaKey];
+  };
+}[RegisteredContentSchemaKey];
+
 export interface TemplateOption {
   id: string;
   templateId: string;
   templateKey: string;
   displayName: string;
   description: string;
+  industryKey: IndustryKey;
   version: number;
   rendererKey: string;
   schemaKey: string;
@@ -149,6 +169,7 @@ export interface TemplateAssignment {
   templateVersionId: string;
   templateName: string;
   templateVersion: number;
+  industryKey: IndustryKey;
   rendererKey: string;
   schemaKey: string;
   schemaVersion: number;
@@ -161,7 +182,7 @@ export interface ContentDraft {
   siteId: string;
   schemaKey: string;
   schemaVersion: number;
-  content: RestaurantAnyContent;
+  content: RegisteredContent;
   revision: number;
   basedOnPublicationId: string | null;
   updatedAt: Date;
@@ -173,9 +194,10 @@ export interface ContentPublication {
   templateVersionId: string;
   templateName: string;
   templateVersion: number;
+  industryKey: IndustryKey;
   schemaKey: string;
   schemaVersion: number;
-  content: RestaurantAnyContent;
+  content: RegisteredContent;
   publicationNumber: number;
   publishedByName: string;
   restoredFromPublicationId: string | null;
@@ -188,6 +210,7 @@ export interface ClientContentWorkspace {
   siteName: string;
   siteStatus: string;
   siteSlug: string;
+  industryKey: IndustryKey;
   assignment: TemplateAssignment | null;
   draft: ContentDraft | null;
   publications: ContentPublication[];
@@ -198,11 +221,12 @@ export interface PublicSiteResolution {
   siteSlug: string;
   publicState: "published" | "preparing" | "unavailable";
   canonicalHostname: string | null;
+  industryKey: IndustryKey;
   rendererKey: string | null;
   schemaKey: string | null;
   schemaVersion: number | null;
   publicationId: string | null;
   publicationNumber: number | null;
-  content: RestaurantAnyContent | null;
+  content: RegisteredContent | null;
   media?: import("@/src/media/types").MediaRenderManifest;
 }

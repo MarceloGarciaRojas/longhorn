@@ -1,8 +1,14 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
-import type { RestaurantAnyContent, RestaurantContentV2 } from "./types";
-import { RESTAURANT_V2_SCHEMA_KEY } from "./types";
+import type { RegisteredContent, RestaurantContentV2 } from "./types";
+import {
+  RESTAURANT_SCHEMA_KEY,
+  RESTAURANT_SCHEMA_VERSION,
+  RESTAURANT_V2_SCHEMA_KEY,
+  RESTAURANT_V2_SCHEMA_VERSION,
+} from "./types";
+import { requireCompatibleContentSchema } from "./schema-dispatch";
 
 export interface ContentMediaReferenceInput {
   fieldPath: string;
@@ -12,10 +18,22 @@ export interface ContentMediaReferenceInput {
 }
 
 export function contentMediaReferences(
+  industryKey: unknown,
   schemaKey: string,
-  content: RestaurantAnyContent,
+  schemaVersion: number,
+  content: RegisteredContent,
 ): ContentMediaReferenceInput[] {
-  if (schemaKey !== RESTAURANT_V2_SCHEMA_KEY) return [];
+  requireCompatibleContentSchema(industryKey, schemaKey, schemaVersion);
+  if (
+    schemaKey === RESTAURANT_SCHEMA_KEY &&
+    schemaVersion === RESTAURANT_SCHEMA_VERSION
+  ) return [];
+  if (
+    schemaKey !== RESTAURANT_V2_SCHEMA_KEY ||
+    schemaVersion !== RESTAURANT_V2_SCHEMA_VERSION
+  ) {
+    throw new Error("media_extractor_unavailable");
+  }
   const v2 = content as RestaurantContentV2;
   const result: ContentMediaReferenceInput[] = [];
   if (v2.hero.media) {

@@ -7,6 +7,7 @@ import {
   applyMigrations,
   getMigrationStatus,
   rollbackAllMigrations,
+  rollbackLatestMigration,
 } from "../../scripts/db/migrations";
 import { seedSyntheticData, SYNTHETIC_DATA } from "../../scripts/db/seed";
 
@@ -41,6 +42,7 @@ test("versioned migrations create only the approved domain schema", async (t) =>
     "0010",
     "0011",
     "0012",
+    "0013",
   ]);
 
   const secondRun = await applyMigrations(migrationUrl);
@@ -55,6 +57,39 @@ test("versioned migrations create only the approved domain schema", async (t) =>
   t.after(async () => {
     await pool.end();
   });
+
+  const restaurantStateBeforeRollback = await pool.query<{
+    templateKey: string;
+    rendererKey: string;
+    schemaKey: string;
+  }>(
+    `SELECT template.key AS "templateKey",version.renderer_key AS "rendererKey",
+       version.content_schema_key AS "schemaKey"
+     FROM public.templates template
+     JOIN public.template_versions version ON version.template_id=template.id
+     WHERE template.industry_key='restaurant' AND template.status='active'
+       AND version.status='active'
+     ORDER BY template.key,version.version`,
+  );
+  assert.equal(await rollbackLatestMigration(migrationUrl), "0013");
+  assert.deepEqual(await applyMigrations(migrationUrl), ["0013"]);
+  const restaurantStateAfterSecondUp = await pool.query<{
+    templateKey: string;
+    rendererKey: string;
+    schemaKey: string;
+  }>(
+    `SELECT template.key AS "templateKey",version.renderer_key AS "rendererKey",
+       version.content_schema_key AS "schemaKey"
+     FROM public.templates template
+     JOIN public.template_versions version ON version.template_id=template.id
+     WHERE template.industry_key='restaurant' AND template.status='active'
+       AND version.status='active'
+     ORDER BY template.key,version.version`,
+  );
+  assert.deepEqual(
+    restaurantStateAfterSecondUp.rows,
+    restaurantStateBeforeRollback.rows,
+  );
 
   const status = await getMigrationStatus(migrationUrl);
   assert.deepEqual(
@@ -72,6 +107,7 @@ test("versioned migrations create only the approved domain schema", async (t) =>
       ["0010", true],
       ["0011", true],
       ["0012", true],
+      ["0013", true],
     ],
   );
 
@@ -313,6 +349,101 @@ test("versioned migrations create only the approved domain schema", async (t) =>
       "23505",
     );
     await client.query("ROLLBACK TO SAVEPOINT duplicate_membership");
+
+    const industryConstraints = await client.query<{
+      tableName: string;
+      constraintName: string;
+      definition: string;
+    }>(
+      `SELECT conrelid::regclass::text AS "tableName",conname AS "constraintName",
+         pg_get_constraintdef(oid) AS definition
+       FROM pg_catalog.pg_constraint
+       WHERE conname IN (
+         'sites_industry_valid','templates_industry_valid',
+         'site_content_draft_schema_valid','site_content_publication_schema_valid'
+       )
+       ORDER BY conname`,
+    );
+    const byName = new Map(
+      industryConstraints.rows.map((row) => [row.constraintName, row.definition]),
+    );
+    assert.match(byName.get("sites_industry_valid") ?? "", /restaurant.*gym/);
+    assert.match(byName.get("templates_industry_valid") ?? "", /restaurant.*gym/);
+    assert.doesNotMatch(byName.get("site_content_draft_schema_valid") ?? "", /gym/);
+    assert.doesNotMatch(byName.get("site_content_publication_schema_valid") ?? "", /gym/);
+
+    const restaurantCatalog = await client.query<{ count: number }>(
+      `SELECT count(*)::int AS count FROM public.templates
+       WHERE industry_key='restaurant' AND status='active'`,
+    );
+    assert.equal(restaurantCatalog.rows[0].count, 3);
+
+    await client.query(
+      `INSERT INTO public.templates(
+         id,key,display_name,industry_key,status,description
+       ) VALUES(
+         'a8bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','gym-test-fixture',
+         'Gym fixture','gym','draft','Fixture sin schema, renderer ni versión funcional'
+       )`,
+    );
+    const gymTemplates = await client.query<{ count: number }>(
+      `SELECT count(*)::int AS count FROM public.templates WHERE industry_key='gym'`,
+    );
+    assert.equal(gymTemplates.rows[0].count, 1);
+
+    await client.query("SAVEPOINT unknown_template_industry");
+    await expectPgCode(
+      () => client.query(
+        `INSERT INTO public.templates(
+           key,display_name,industry_key,status,description
+         ) VALUES(
+           'unknown-industry-fixture','Unknown fixture','school','draft',
+           'Fixture de industria desconocida que debe ser rechazada'
+         )`,
+      ),
+      "23514",
+    );
+    await client.query("ROLLBACK TO SAVEPOINT unknown_template_industry");
+
+    await client.query(
+      `INSERT INTO public.sites(id,tenant_id,display_name,slug,industry_key)
+       VALUES('76666666-6666-4666-8666-666666666666',$1,'Gym aislado','gym-aislado','gym')`,
+      [SYNTHETIC_DATA.tenantA.id],
+    );
+    const gymSite = await client.query<{ industryKey: string }>(
+      `SELECT industry_key AS "industryKey" FROM public.sites
+       WHERE id='76666666-6666-4666-8666-666666666666'`,
+    );
+    assert.equal(gymSite.rows[0].industryKey, "gym");
+
+    await client.query("SAVEPOINT unknown_site_industry");
+    await expectPgCode(
+      () => client.query(
+        `UPDATE public.sites SET industry_key='school'
+         WHERE id='76666666-6666-4666-8666-666666666666'`,
+      ),
+      "23514",
+    );
+    await client.query("ROLLBACK TO SAVEPOINT unknown_site_industry");
+
+    await client.query("SAVEPOINT cross_industry_assignment");
+    await expectPgCode(
+      () => client.query(
+        `INSERT INTO public.site_template_assignments(
+           tenant_id,site_id,template_version_id,schema_key,schema_version,
+           assigned_by_user_id,idempotency_key
+         ) VALUES($1,'76666666-6666-4666-8666-666666666666',$2,'restaurant.v2',2,$3,$4)`,
+        [
+          SYNTHETIC_DATA.tenantA.id,
+          SYNTHETIC_DATA.templateRestaurantV2.id,
+          SYNTHETIC_DATA.userA.id,
+          "76666666-6666-4666-8666-766666666666",
+        ],
+      ),
+      "23514",
+    );
+    await client.query("ROLLBACK TO SAVEPOINT cross_industry_assignment");
+
     await client.query("ROLLBACK");
   } finally {
     client.release();

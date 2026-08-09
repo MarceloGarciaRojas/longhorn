@@ -224,10 +224,10 @@ test("v2 enforces alt semantics and refuses URL/object-key fields", () => {
 });
 
 test("only registered v2 renderers are compatible", () => {
-  assert.equal(rendererIsCompatible("restaurant-classic-v2", "restaurant.v2", 2), true);
-  assert.equal(rendererIsCompatible("restaurant-modern-v1", "restaurant.v2", 2), true);
-  assert.equal(rendererIsCompatible("../../arbitrary", "restaurant.v2", 2), false);
-  assert.equal(rendererIsCompatible("restaurant-modern-v1", "restaurant.v1", 1), false);
+  assert.equal(rendererIsCompatible("restaurant-classic-v2", "restaurant", "restaurant.v2", 2), true);
+  assert.equal(rendererIsCompatible("restaurant-modern-v1", "restaurant", "restaurant.v2", 2), true);
+  assert.equal(rendererIsCompatible("../../arbitrary", "restaurant", "restaurant.v2", 2), false);
+  assert.equal(rendererIsCompatible("restaurant-modern-v1", "restaurant", "restaurant.v1", 1), false);
 });
 
 test("editorial renders complete restaurant.v2 content with semantic landmarks", () => {
@@ -406,15 +406,15 @@ test("editorial is registered only for restaurant.v2 and contains no fixed comme
   assert.equal(keys.includes("restaurant-editorial-v1"), true);
   assert.equal(new Set(keys).size, keys.length);
   assert.equal(
-    rendererIsCompatible("restaurant-editorial-v1", "restaurant.v2", 2),
+    rendererIsCompatible("restaurant-editorial-v1", "restaurant", "restaurant.v2", 2),
     true,
   );
   assert.equal(
-    rendererIsCompatible("restaurant-editorial-v1", "restaurant.v1", 1),
+    rendererIsCompatible("restaurant-editorial-v1", "restaurant", "restaurant.v1", 1),
     false,
   );
   assert.equal(
-    rendererIsCompatible("restaurant-editorial-v1", "restaurant.v2", 3),
+    rendererIsCompatible("restaurant-editorial-v1", "restaurant", "restaurant.v2", 3),
     false,
   );
   assert.doesNotMatch(source, /Restaurante Sintético|Avenida Demostración|\$0 demostrativo/);

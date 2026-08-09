@@ -27,14 +27,13 @@ import {
   replaceDraftMediaReferences,
 } from "./media-references.server";
 import {
+  ContentSchemaValidationError,
   parseContentForSchema,
   validateContentForSchema,
 } from "./schema-dispatch";
 import { mediaManifestForOwner } from "@/src/media/service.server";
-import {
-  emptyRestaurantContent,
-  RestaurantContentValidationError,
-} from "./restaurant-schema";
+import { emptyRestaurantContent } from "./restaurant-schema";
+import { RESTAURANT_INDUSTRY_KEY, type IndustryKey } from "./industry";
 import {
   RESTAURANT_SCHEMA_KEY,
   RESTAURANT_SCHEMA_VERSION,
@@ -42,7 +41,7 @@ import {
   type ContentDraft,
   type ContentPublication,
   type PublicSiteResolution,
-  type RestaurantAnyContent,
+  type RegisteredContent,
   type RestaurantContent,
   type TemplateAssignment,
   type TemplateOption,
@@ -130,11 +129,13 @@ const ASSIGNMENT_SELECT = `SELECT
   assignment.template_version_id AS "templateVersionId",
   template.display_name AS "templateName",
   version.version AS "templateVersion",
+  site.industry_key AS "industryKey",
   version.renderer_key AS "rendererKey",
   assignment.schema_key AS "schemaKey",
   assignment.schema_version AS "schemaVersion",
   assignment.status,assignment.version
 FROM public.site_template_assignments assignment
+JOIN public.sites site ON site.id=assignment.site_id
 JOIN public.template_versions version ON version.id=assignment.template_version_id
 JOIN public.templates template ON template.id=version.template_id`;
 
@@ -143,6 +144,7 @@ const PUBLICATION_SELECT = `SELECT
   publication.template_version_id AS "templateVersionId",
   template.display_name AS "templateName",
   version.version AS "templateVersion",
+  site.industry_key AS "industryKey",
   publication.schema_key AS "schemaKey",
   publication.schema_version AS "schemaVersion",
   publication.content_snapshot AS content,
@@ -159,11 +161,14 @@ LEFT JOIN public.users account ON account.id=publication.published_by_user_id`;
 
 export async function adminTemplateOptions(
   session: AuthSession,
+  siteId: string,
 ): Promise<TemplateOption[]> {
+  if (!/^[0-9a-f-]{36}$/i.test(siteId)) return [];
   return withAdminOperation(session, pageId("admin-template-options"), async (client) => {
     const result = await client.query<TemplateOption>(
-      `SELECT version.id,template.id AS "templateId",template.key AS "templateKey",
+       `SELECT version.id,template.id AS "templateId",template.key AS "templateKey",
          template.display_name AS "displayName",template.description,
+         template.industry_key AS "industryKey",
          version.version,version.renderer_key AS "rendererKey",
          version.content_schema_key AS "schemaKey",
          version.minimum_schema_version AS "minimumSchemaVersion",
@@ -172,7 +177,12 @@ export async function adminTemplateOptions(
        FROM public.template_versions version
        JOIN public.templates template ON template.id=version.template_id
        WHERE template.status='active' AND version.status IN ('active','deprecated')
+         AND template.industry_key=(
+           SELECT site.industry_key FROM public.sites site
+           WHERE site.id=$1 AND site.deleted_at IS NULL
+         )
        ORDER BY template.display_name,version.version DESC`,
+      [siteId],
     );
     return result.rows.sort(templateCatalogOrder);
   });
@@ -219,16 +229,17 @@ export async function adminAssignTemplate(
     : null;
   try {
     const outcome = await withAdminOperation(session, correlationId, async (client) => {
-      const site = await client.query<{ tenantId: string }>(
-        `SELECT tenant_id AS "tenantId" FROM public.sites
+      const site = await client.query<{ tenantId: string; industryKey: IndustryKey }>(
+        `SELECT tenant_id AS "tenantId",industry_key AS "industryKey" FROM public.sites
          WHERE id=$1 AND status IN ('preparing','active','suspended')
            AND deleted_at IS NULL FOR UPDATE`,
         [siteId],
       );
       if (!site.rows[0]) throw new OperationValidationError("not_found");
       const option = await client.query<TemplateOption>(
-        `SELECT version.id,template.id AS "templateId",template.key AS "templateKey",
+         `SELECT version.id,template.id AS "templateId",template.key AS "templateKey",
            template.display_name AS "displayName",template.description,
+           template.industry_key AS "industryKey",
            version.version,version.renderer_key AS "rendererKey",
            version.content_schema_key AS "schemaKey",
            version.minimum_schema_version AS "minimumSchemaVersion",
@@ -241,8 +252,12 @@ export async function adminAssignTemplate(
       );
       const selected = option.rows[0];
       if (!selected) throw new OperationValidationError("not_found");
+      if (selected.industryKey !== site.rows[0].industryKey) {
+        throw new OperationValidationError("denied");
+      }
       if (!rendererIsCompatible(
         selected.rendererKey,
+        selected.industryKey,
         selected.schemaKey,
         selected.minimumSchemaVersion,
       )) {
@@ -365,10 +380,12 @@ export async function adminInitializeContent(
       const context = await client.query<{
         tenantId: string;
         siteName: string;
+        industryKey: IndustryKey;
         schemaKey: string;
         schemaVersion: number;
       }>(
         `SELECT site.tenant_id AS "tenantId",site.display_name AS "siteName",
+           site.industry_key AS "industryKey",
            assignment.schema_key AS "schemaKey",
            assignment.schema_version AS "schemaVersion"
          FROM public.sites site
@@ -379,7 +396,8 @@ export async function adminInitializeContent(
         [siteId],
       );
       const row = context.rows[0];
-      if (!row || row.schemaKey !== RESTAURANT_SCHEMA_KEY ||
+      if (!row || row.industryKey !== RESTAURANT_INDUSTRY_KEY ||
+          row.schemaKey !== RESTAURANT_SCHEMA_KEY ||
           row.schemaVersion !== RESTAURANT_SCHEMA_VERSION) {
         throw new OperationValidationError("not_found");
       }
@@ -426,9 +444,10 @@ async function loadClientWorkspace(
     siteName: string;
     siteStatus: string;
     siteSlug: string;
+    industryKey: IndustryKey;
   }>(
     `SELECT id AS "siteId",display_name AS "siteName",status AS "siteStatus",
-       slug AS "siteSlug"
+       slug AS "siteSlug",industry_key AS "industryKey"
      FROM public.sites WHERE id=$1
        AND tenant_id=app_context.current_tenant_id() AND deleted_at IS NULL`,
     [siteId],
@@ -501,19 +520,21 @@ async function mediaAudit(
 export async function clientCompatibleTemplates(
   session: AuthSession,
   siteId: string,
-): Promise<{ currentTemplateVersionId: string; options: TemplateOption[] } | null> {
+): Promise<{ currentTemplateVersionId: string | null; options: TemplateOption[] } | null> {
   if (!/^[0-9a-f-]{36}$/i.test(siteId)) return null;
   return withClientOperation(session, pageId("template-catalog"), async (client) => {
     const context = await client.query<{
-      templateVersionId: string;
-      schemaKey: string;
-      schemaVersion: number;
+      industryKey: IndustryKey;
+      templateVersionId: string | null;
+      schemaKey: string | null;
+      schemaVersion: number | null;
     }>(
-      `SELECT assignment.template_version_id AS "templateVersionId",
+      `SELECT site.industry_key AS "industryKey",
+         assignment.template_version_id AS "templateVersionId",
          draft.schema_key AS "schemaKey",draft.schema_version AS "schemaVersion"
        FROM public.sites site
-       JOIN public.site_content_drafts draft ON draft.site_id=site.id
-       JOIN public.site_template_assignments assignment
+       LEFT JOIN public.site_content_drafts draft ON draft.site_id=site.id
+       LEFT JOIN public.site_template_assignments assignment
          ON assignment.site_id=site.id AND assignment.status='active'
        WHERE site.id=$1 AND site.tenant_id=app_context.current_tenant_id()
          AND site.status IN ('preparing','active') AND site.deleted_at IS NULL`,
@@ -521,10 +542,15 @@ export async function clientCompatibleTemplates(
     );
     const current = context.rows[0];
     if (!current) return null;
+    if (!current.templateVersionId || !current.schemaKey || !current.schemaVersion) {
+      return { currentTemplateVersionId: null, options: [] };
+    }
+    const schemaKey = current.schemaKey;
+    const schemaVersion = current.schemaVersion;
     const result = await client.query<TemplateOption>(
       `SELECT version.id,template.id AS "templateId",
          template.key AS "templateKey",template.display_name AS "displayName",
-         template.description,version.version,
+         template.description,template.industry_key AS "industryKey",version.version,
          version.renderer_key AS "rendererKey",
          version.content_schema_key AS "schemaKey",
          version.minimum_schema_version AS "minimumSchemaVersion",
@@ -532,13 +558,13 @@ export async function clientCompatibleTemplates(
          version.status,version.preview_key AS "previewKey"
        FROM public.template_versions version
        JOIN public.templates template ON template.id=version.template_id
-       WHERE template.industry_key='restaurant' AND template.status='active'
+       WHERE template.industry_key=$1 AND template.status='active'
          AND version.status='active'
-         AND version.content_schema_key=$1
-         AND $2 BETWEEN version.minimum_schema_version
+         AND version.content_schema_key=$2
+         AND $3 BETWEEN version.minimum_schema_version
                     AND version.maximum_schema_version
        ORDER BY template.display_name,version.version DESC`,
-      [current.schemaKey, current.schemaVersion],
+      [current.industryKey, schemaKey, schemaVersion],
     );
     return {
       currentTemplateVersionId: current.templateVersionId,
@@ -546,8 +572,9 @@ export async function clientCompatibleTemplates(
         .filter((option) =>
           rendererIsCompatible(
             option.rendererKey,
-            current.schemaKey,
-            current.schemaVersion,
+            current.industryKey,
+            schemaKey,
+            schemaVersion,
           ),
         )
         .sort(templateCatalogOrder),
@@ -583,6 +610,7 @@ export async function clientPreviewAlternativeTemplate(
     );
     if (!draft.rows[0]) return null;
     validateContentForSchema(
+      option.industryKey,
       draft.rows[0].schemaKey,
       draft.rows[0].schemaVersion,
       draft.rows[0].content,
@@ -621,9 +649,11 @@ export async function adminPreviewAlternativeTemplate(
   return withAdminOperation(session, pageId("admin-template-preview"), async (client) => {
     const context = await client.query<{
       tenantId: string;
+      industryKey: IndustryKey;
       draft: ContentDraft;
     }>(
       `SELECT site.tenant_id AS "tenantId",
+         site.industry_key AS "industryKey",
          jsonb_build_object(
            'id',draft.id,
            'siteId',draft.site_id,
@@ -644,9 +674,9 @@ export async function adminPreviewAlternativeTemplate(
     const current = context.rows[0];
     if (!current) return null;
     const option = await client.query<TemplateOption>(
-      `SELECT version.id,template.id AS "templateId",
+       `SELECT version.id,template.id AS "templateId",
          template.key AS "templateKey",template.display_name AS "displayName",
-         template.description,version.version,
+         template.description,template.industry_key AS "industryKey",version.version,
          version.renderer_key AS "rendererKey",
          version.content_schema_key AS "schemaKey",
          version.minimum_schema_version AS "minimumSchemaVersion",
@@ -655,23 +685,30 @@ export async function adminPreviewAlternativeTemplate(
        FROM public.template_versions version
        JOIN public.templates template ON template.id=version.template_id
        WHERE version.id=$1
-         AND template.industry_key='restaurant'
+         AND template.industry_key=$2
          AND template.status='active'
          AND version.status='active'
-         AND version.content_schema_key=$2
-         AND $3 BETWEEN version.minimum_schema_version
+         AND version.content_schema_key=$3
+         AND $4 BETWEEN version.minimum_schema_version
                     AND version.maximum_schema_version`,
-      [templateVersionId, current.draft.schemaKey, current.draft.schemaVersion],
+      [
+        templateVersionId,
+        current.industryKey,
+        current.draft.schemaKey,
+        current.draft.schemaVersion,
+      ],
     );
     const selected = option.rows[0];
     if (!selected || !rendererIsCompatible(
       selected.rendererKey,
+      current.industryKey,
       current.draft.schemaKey,
       current.draft.schemaVersion,
     )) {
       return null;
     }
     validateContentForSchema(
+      current.industryKey,
       current.draft.schemaKey,
       current.draft.schemaVersion,
       current.draft.content,
@@ -697,27 +734,38 @@ export async function adminPreviewAlternativeTemplate(
 async function clientCompatibleTemplatesInTransaction(
   client: PoolClient,
   siteId: string,
-): Promise<{ currentTemplateVersionId: string; options: TemplateOption[] } | null> {
+): Promise<{ currentTemplateVersionId: string | null; options: TemplateOption[] } | null> {
   const current = await client.query<{
-    templateVersionId: string;
-    schemaKey: string;
-    schemaVersion: number;
+    industryKey: IndustryKey;
+    templateVersionId: string | null;
+    schemaKey: string | null;
+    schemaVersion: number | null;
   }>(
-    `SELECT assignment.template_version_id AS "templateVersionId",
+    `SELECT site.industry_key AS "industryKey",
+       assignment.template_version_id AS "templateVersionId",
        draft.schema_key AS "schemaKey",draft.schema_version AS "schemaVersion"
      FROM public.sites site
-     JOIN public.site_content_drafts draft ON draft.site_id=site.id
-     JOIN public.site_template_assignments assignment
+     LEFT JOIN public.site_content_drafts draft ON draft.site_id=site.id
+     LEFT JOIN public.site_template_assignments assignment
        ON assignment.site_id=site.id AND assignment.status='active'
      WHERE site.id=$1 AND site.tenant_id=app_context.current_tenant_id()
        AND site.status IN ('preparing','active') AND site.deleted_at IS NULL`,
     [siteId],
   );
   if (!current.rows[0]) return null;
+  if (!current.rows[0].templateVersionId || !current.rows[0].schemaKey ||
+      !current.rows[0].schemaVersion) {
+    return { currentTemplateVersionId: null, options: [] };
+  }
+  const currentRow = current.rows[0] as typeof current.rows[number] & {
+    templateVersionId: string;
+    schemaKey: string;
+    schemaVersion: number;
+  };
   const options = await client.query<TemplateOption>(
     `SELECT version.id,template.id AS "templateId",
        template.key AS "templateKey",template.display_name AS "displayName",
-       template.description,version.version,
+       template.description,template.industry_key AS "industryKey",version.version,
        version.renderer_key AS "rendererKey",
        version.content_schema_key AS "schemaKey",
        version.minimum_schema_version AS "minimumSchemaVersion",
@@ -725,20 +773,25 @@ async function clientCompatibleTemplatesInTransaction(
        version.status,version.preview_key AS "previewKey"
      FROM public.template_versions version
      JOIN public.templates template ON template.id=version.template_id
-     WHERE template.industry_key='restaurant' AND template.status='active'
-       AND version.status='active' AND version.content_schema_key=$1
-       AND $2 BETWEEN version.minimum_schema_version
+     WHERE template.industry_key=$1 AND template.status='active'
+       AND version.status='active' AND version.content_schema_key=$2
+       AND $3 BETWEEN version.minimum_schema_version
                   AND version.maximum_schema_version`,
-    [current.rows[0].schemaKey, current.rows[0].schemaVersion],
+    [
+      currentRow.industryKey,
+      currentRow.schemaKey,
+      currentRow.schemaVersion,
+    ],
   );
   return {
-    currentTemplateVersionId: current.rows[0].templateVersionId,
+    currentTemplateVersionId: currentRow.templateVersionId,
     options: options.rows
       .filter((option) =>
         rendererIsCompatible(
           option.rendererKey,
-          current.rows[0].schemaKey,
-          current.rows[0].schemaVersion,
+          currentRow.industryKey,
+          currentRow.schemaKey,
+          currentRow.schemaVersion,
         ),
       )
       .sort(templateCatalogOrder),
@@ -819,10 +872,11 @@ export async function migrateClientDraftToRestaurantV2(
       content: RestaurantContent;
       lastIdempotencyKey: string;
       assignmentId: string;
+      industryKey: IndustryKey;
     }>(
-      `SELECT draft.id,draft.revision,draft.schema_key AS "schemaKey",
+       `SELECT draft.id,draft.revision,draft.schema_key AS "schemaKey",
          draft.content,draft.last_idempotency_key AS "lastIdempotencyKey",
-         assignment.id AS "assignmentId"
+         assignment.id AS "assignmentId",site.industry_key AS "industryKey"
        FROM public.site_content_drafts draft
        JOIN public.sites site ON site.id=draft.site_id
        JOIN public.site_template_assignments assignment
@@ -835,6 +889,9 @@ export async function migrateClientDraftToRestaurantV2(
     );
     const row = draft.rows[0];
     if (!row) throw new OperationValidationError("not_found");
+    if (row.industryKey !== RESTAURANT_INDUSTRY_KEY) {
+      throw new OperationValidationError("denied");
+    }
     if (row.schemaKey === RESTAURANT_V2_SCHEMA_KEY) return siteId;
     if (row.lastIdempotencyKey === idempotencyKey) return siteId;
     if (row.revision !== expectedRevision) throw new OperationValidationError("conflict");
@@ -887,7 +944,12 @@ export async function migrateClientDraftToRestaurantV2(
       tenantId: session.activeTenantId!,
       siteId,
       draftId: row.id,
-      references: contentMediaReferences(RESTAURANT_V2_SCHEMA_KEY, migrated),
+      references: contentMediaReferences(
+        RESTAURANT_INDUSTRY_KEY,
+        RESTAURANT_V2_SCHEMA_KEY,
+        RESTAURANT_V2_SCHEMA_VERSION,
+        migrated,
+      ),
     });
     await mediaAudit(client, {
       tenantId: session.activeTenantId!,
@@ -902,13 +964,13 @@ export async function migrateClientDraftToRestaurantV2(
 }
 
 function changedSections(
-  previous: RestaurantAnyContent,
-  next: RestaurantAnyContent,
+  previous: RegisteredContent,
+  next: RegisteredContent,
 ): string[] {
-  return Object.keys(next).filter((key) =>
-    JSON.stringify(previous[key as keyof RestaurantAnyContent]) !==
-    JSON.stringify(next[key as keyof RestaurantAnyContent]),
-  );
+  const previousEntries = new Map(Object.entries(previous));
+  return Object.entries(next)
+    .filter(([key, value]) => JSON.stringify(previousEntries.get(key)) !== JSON.stringify(value))
+    .map(([key]) => key);
 }
 
 async function recordClientFailure(
@@ -949,11 +1011,12 @@ export async function saveContentDraft(
         rendererKey: string;
         schemaKey: string;
         schemaVersion: number;
-        content: RestaurantAnyContent;
+        industryKey: IndustryKey;
+        content: RegisteredContent;
       }>(
         `SELECT draft.id,draft.revision,
            draft.last_idempotency_key AS "lastIdempotencyKey",
-           version.renderer_key AS "rendererKey",
+           version.renderer_key AS "rendererKey",site.industry_key AS "industryKey",
            draft.schema_key AS "schemaKey",draft.schema_version AS "schemaVersion",
            draft.content
          FROM public.site_content_drafts draft
@@ -970,10 +1033,16 @@ export async function saveContentDraft(
       );
       const row = current.rows[0];
       if (!row) throw new OperationValidationError("not_found");
-      if (!rendererIsCompatible(row.rendererKey, row.schemaKey, row.schemaVersion)) {
+      if (!rendererIsCompatible(
+        row.rendererKey,
+        row.industryKey,
+        row.schemaKey,
+        row.schemaVersion,
+      )) {
         throw new OperationValidationError("invalid");
       }
       const content = parseContentForSchema(
+        row.industryKey,
         row.schemaKey,
         row.schemaVersion,
         serialized,
@@ -1001,7 +1070,12 @@ export async function saveContentDraft(
         tenantId: session.activeTenantId!,
         siteId,
         draftId: row.id,
-        references: contentMediaReferences(row.schemaKey, content),
+        references: contentMediaReferences(
+          row.industryKey,
+          row.schemaKey,
+          row.schemaVersion,
+          content,
+        ),
       });
       await clientAudit(
         client,
@@ -1053,12 +1127,14 @@ export async function clientPreviewContent(
     }
     if (!rendererIsCompatible(
       workspace.assignment.rendererKey,
+      workspace.industryKey,
       workspace.draft.schemaKey,
       workspace.draft.schemaVersion,
     )) {
       return null;
     }
     validateContentForSchema(
+      workspace.industryKey,
       workspace.draft.schemaKey,
       workspace.draft.schemaVersion,
       workspace.draft.content,
@@ -1105,8 +1181,11 @@ export async function publishContentTransaction(
   }>,
 ): Promise<ContentPublicationTransactionResult> {
   const allowedStatuses = input.allowedSiteStatuses ?? ["active"];
-  const site = await client.query<{ status: "preparing" | "active" }>(
-    `SELECT status FROM public.sites WHERE id=$1 AND tenant_id=$2
+  const site = await client.query<{
+    status: "preparing" | "active";
+    industryKey: IndustryKey;
+  }>(
+    `SELECT status,industry_key AS "industryKey" FROM public.sites WHERE id=$1 AND tenant_id=$2
        AND status=ANY($3::text[]) AND deleted_at IS NULL FOR UPDATE`,
     [input.siteId, input.tenantId, allowedStatuses],
   );
@@ -1137,15 +1216,17 @@ export async function publishContentTransaction(
     revision: number;
     schemaKey: string;
     schemaVersion: number;
-    content: RestaurantAnyContent;
+    industryKey: IndustryKey;
+    content: RegisteredContent;
     templateVersionId: string;
     rendererKey: string;
   }>(
     `SELECT draft.id,draft.revision,draft.schema_key AS "schemaKey",
        draft.schema_version AS "schemaVersion",draft.content,
        assignment.template_version_id AS "templateVersionId",
-       version.renderer_key AS "rendererKey"
+       version.renderer_key AS "rendererKey",site.industry_key AS "industryKey"
      FROM public.site_content_drafts draft
+     JOIN public.sites site ON site.id=draft.site_id
      JOIN public.site_template_assignments assignment
        ON assignment.site_id=draft.site_id AND assignment.status='active'
      JOIN public.template_versions version
@@ -1160,21 +1241,28 @@ export async function publishContentTransaction(
     return { siteId: input.siteId, rejected: "revision" };
   }
   if (
-    !rendererIsCompatible(row.rendererKey, row.schemaKey, row.schemaVersion) ||
-    !rendererPublicationIsAllowed(row.rendererKey)
+    row.industryKey !== site.rows[0].industryKey ||
+    !rendererIsCompatible(
+      row.rendererKey,
+      row.industryKey,
+      row.schemaKey,
+      row.schemaVersion,
+    ) ||
+    !rendererPublicationIsAllowed(row.rendererKey, row.industryKey)
   ) {
     return { siteId: input.siteId, rejected: "renderer" };
   }
-  let content: RestaurantAnyContent;
+  let content: RegisteredContent;
   try {
     content = validateContentForSchema(
+      row.industryKey,
       row.schemaKey,
       row.schemaVersion,
       row.content,
       "publication",
     );
   } catch (error) {
-    if (error instanceof RestaurantContentValidationError) {
+    if (error instanceof ContentSchemaValidationError) {
       return {
         siteId: input.siteId,
         rejected: "content",
@@ -1289,8 +1377,8 @@ export async function restorePublication(
   const idempotencyKey = uuid(form.get("idempotency_key"));
   try {
     const result = await withClientOperation(session, correlationId, async (client) => {
-      const site = await client.query(
-        `SELECT 1 FROM public.sites WHERE id=$1
+      const site = await client.query<{ industryKey: IndustryKey }>(
+        `SELECT industry_key AS "industryKey" FROM public.sites WHERE id=$1
            AND tenant_id=app_context.current_tenant_id()
            AND status='active' AND deleted_at IS NULL FOR UPDATE`,
         [siteId],
@@ -1308,15 +1396,17 @@ export async function restorePublication(
         templateVersionId: string;
         schemaKey: string;
         schemaVersion: number;
-        content: RestaurantAnyContent;
+        industryKey: IndustryKey;
+        content: RegisteredContent;
         rendererKey: string;
       }>(
         `SELECT publication.template_version_id AS "templateVersionId",
            publication.schema_key AS "schemaKey",
            publication.schema_version AS "schemaVersion",
-           publication.content_snapshot AS content,
+           publication.content_snapshot AS content,site.industry_key AS "industryKey",
            version.renderer_key AS "rendererKey"
          FROM public.site_content_publications publication
+         JOIN public.sites site ON site.id=publication.site_id
          JOIN public.template_versions version
            ON version.id=publication.template_version_id
          WHERE publication.id=$1 AND publication.site_id=$2
@@ -1326,14 +1416,17 @@ export async function restorePublication(
       const row = source.rows[0];
       if (
         !row ||
+        row.industryKey !== site.rows[0].industryKey ||
         !rendererIsCompatible(
           row.rendererKey,
+          row.industryKey,
           row.schemaKey,
           row.schemaVersion,
         ) ||
-        !rendererPublicationIsAllowed(row.rendererKey)
+        !rendererPublicationIsAllowed(row.rendererKey, row.industryKey)
       ) return { rejected: "source" as const };
       const content = validateContentForSchema(
+        row.industryKey,
         row.schemaKey,
         row.schemaVersion,
         row.content,
@@ -1453,7 +1546,7 @@ export async function resolvePublicSite(input: {
     const result = await pool.query<PublicSiteResolution>(
       `SELECT site_id AS "siteId",site_slug AS "siteSlug",
          public_state AS "publicState",canonical_hostname AS "canonicalHostname",
-         renderer_key AS "rendererKey",schema_key AS "schemaKey",
+         industry_key AS "industryKey",renderer_key AS "rendererKey",schema_key AS "schemaKey",
          schema_version AS "schemaVersion",publication_id AS "publicationId",
          publication_number AS "publicationNumber",content_snapshot AS content
        FROM app_private.resolve_public_site($1,$2)`,
@@ -1463,17 +1556,23 @@ export async function resolvePublicSite(input: {
     if (row?.publicState === "published" && row.content) {
       try {
         validateContentForSchema(
+          row.industryKey,
           row.schemaKey ?? "",
           row.schemaVersion ?? 0,
           row.content,
           "publication",
         );
         if (!row.rendererKey || !row.schemaKey || !row.schemaVersion ||
-            !rendererIsCompatible(row.rendererKey, row.schemaKey, row.schemaVersion)) {
+            !rendererIsCompatible(
+              row.rendererKey,
+              row.industryKey,
+              row.schemaKey,
+              row.schemaVersion,
+            )) {
           throw new Error("renderer");
         }
       } catch (error) {
-        const reason = error instanceof RestaurantContentValidationError
+        const reason = error instanceof ContentSchemaValidationError
           ? "content"
           : "renderer";
         await pool.query(
