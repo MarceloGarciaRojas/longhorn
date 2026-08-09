@@ -16,7 +16,12 @@ operativas: Classic, Modern y Restaurante Editorial.
 La aplicación ejecutable se encuentra en [`site/`](site/README.md).
 
 Consulta el [índice de documentación](docs/README.md).
+El cierre integral de la Etapa 9B se documenta en el
+[informe de Restaurante Editorial](docs/etapa-9b-cierre-restaurante-editorial.md).
 La preparación del Pull Request #3 está registrada en el
 [informe de preparación para merge](docs/informe-preparacion-merge-pr-3.md) y
 las condiciones pendientes se mantienen en el
 [registro central de deuda técnica](docs/deuda-tecnica.md).
+
+La Etapa 9B está implementada en local y CI. No se han habilitado staging,
+producción ni proveedores productivos.

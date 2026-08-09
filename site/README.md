@@ -382,6 +382,11 @@ Actualmente existen tres plantillas operativas de restaurante en local/CI:
 Classic, Modern y Restaurante Editorial. Las tres admiten preview, selección,
 publicación, restauración y onboarding sobre los contratos vigentes.
 
+El cierre integral, la evidencia de seguridad y el mapa de revisión del PR #4
+están en
+[`docs/etapa-9b-cierre-restaurante-editorial.md`](../docs/etapa-9b-cierre-restaurante-editorial.md).
+Staging, producción y proveedores productivos continúan sin habilitar.
+
 Variables no secretas:
 
 - `ONBOARDING_PUBLIC_FORM_ENABLED`;
