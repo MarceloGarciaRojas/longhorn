@@ -7,6 +7,7 @@ import {
   adminTemplateAssignment,
   adminTemplateOptions,
 } from "@/src/content/service.server";
+import { templateSelectionIsAllowed } from "@/src/content/template-capabilities";
 import { randomUUID } from "node:crypto";
 import {
   adminSite,
@@ -35,13 +36,16 @@ export default async function AdminSitePage({
   ]);
   if (!site) notFound();
   const editable = !["archived", "deletion_requested"].includes(site.status);
-  const assignableTemplateOptions = contentDraft && assignment
+  const compatibleTemplateOptions = contentDraft && assignment
     ? templateOptions.filter((option) =>
         option.schemaKey === assignment.schemaKey &&
         assignment.schemaVersion >= option.minimumSchemaVersion &&
         assignment.schemaVersion <= option.maximumSchemaVersion,
       )
     : templateOptions;
+  const assignableTemplateOptions = compatibleTemplateOptions.filter(
+    templateSelectionIsAllowed,
+  );
   return (
     <main className="admin-content">
       <PageHeader
@@ -106,17 +110,18 @@ export default async function AdminSitePage({
             </OperationSubmit>
           </form>
         ) : null}
-        {contentDraft && assignableTemplateOptions.length > 0 ? (
+        {contentDraft && compatibleTemplateOptions.length > 0 ? (
           <div className="content-editor-actions">
-            {assignableTemplateOptions.map((option) => (
-              <Link
-                className="admin-button secondary"
-                href={`/nexi-interno/sitios/${siteId}/plantillas/${option.id}/preview`}
-                key={option.id}
-                target="_blank"
-              >
-                Previsualizar {option.displayName}
-              </Link>
+            {compatibleTemplateOptions.map((option) => (
+              <div key={option.id}>
+                <Link
+                  className="admin-button secondary"
+                  href={`/nexi-interno/sitios/${siteId}/plantillas/${option.id}/preview`}
+                  target="_blank"
+                >
+                  Previsualizar {option.displayName}
+                </Link>
+              </div>
             ))}
           </div>
         ) : null}

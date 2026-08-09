@@ -21,6 +21,7 @@ import {
 } from "@/src/admin/validation";
 import { rendererIsCompatible } from "@/src/content/renderer-manifest";
 import { validateRestaurantV2Content } from "@/src/content/restaurant-v2-schema";
+import { rendererOnboardingIsAllowed } from "@/src/content/template-capabilities";
 import {
   publishContentTransaction,
   resolvePublicSite,
@@ -274,8 +275,9 @@ export async function adminOnboardingOptions(
           `SELECT id,display_name AS name FROM public.plans
            WHERE status='active' ORDER BY display_name`,
         ),
-        client.query<{ id: string; name: string }>(
-          `SELECT version.id,template.display_name||' v'||version.version AS name
+        client.query<{ id: string; name: string; rendererKey: string }>(
+          `SELECT version.id,template.display_name||' v'||version.version AS name,
+             version.renderer_key AS "rendererKey"
            FROM public.template_versions version
            JOIN public.templates template ON template.id=version.template_id
            WHERE template.industry_key='restaurant' AND template.status='active'
@@ -295,7 +297,11 @@ export async function adminOnboardingOptions(
       ]);
       return {
         plans: plans.rows,
-        templates: templates.rows,
+        templates: templates.rows
+          .filter((template) =>
+            rendererOnboardingIsAllowed(template.rendererKey),
+          )
+          .map(({ id, name }) => ({ id, name })),
         admins: admins.rows,
         tenants: tenants.rows,
       };
@@ -647,8 +653,9 @@ async function prepareConversionResources(
            version=public.tenant_plan_assignments.version+1`,
         [planAssignmentId,tenantId,planId],
       );
-      const template = await client.query(
-        `SELECT 1 FROM public.template_versions version
+      const template = await client.query<{ rendererKey: string }>(
+        `SELECT version.renderer_key AS "rendererKey"
+         FROM public.template_versions version
          JOIN public.templates template ON template.id=version.template_id
          WHERE version.id=$1 AND version.status='active'
            AND template.status='active' AND template.industry_key='restaurant'
@@ -657,7 +664,12 @@ async function prepareConversionResources(
            AND version.maximum_schema_version>=2`,
         [templateVersionId],
       );
-      if (!template.rowCount) throw new OnboardingOperationError("unsupported");
+      if (
+        !template.rows[0] ||
+        !rendererOnboardingIsAllowed(template.rows[0].rendererKey)
+      ) {
+        throw new OnboardingOperationError("unsupported");
+      }
       const siteId = deterministicUuid(`onboarding:site:${intakeId}`);
       await client.query(
         `INSERT INTO public.sites(

@@ -7,6 +7,7 @@ import {
   clientCompatibleTemplates,
   clientContentWorkspace,
 } from "@/src/content/service.server";
+import { templateSelectionIsAllowed } from "@/src/content/template-capabilities";
 import { ClientNotice, ClientPageHeader } from "../../../ui";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export default async function TemplateCatalogPage({
       <section className="template-catalog-grid">
         {catalog.options.map((option) => {
           const selected = option.id === catalog.currentTemplateVersionId;
+          const selectable = templateSelectionIsAllowed(option);
           return (
             <article className="client-profile-form" key={option.id}>
               <div className={`template-preview-art ${option.previewKey ?? ""}`} aria-hidden="true" />
@@ -53,7 +55,7 @@ export default async function TemplateCatalogPage({
                 >
                   Previsualizar
                 </Link>
-                {!selected ? (
+                {!selected && selectable ? (
                   <form action="/api/client/operations" method="post">
                     <input type="hidden" name="action" value="template_change" />
                     <input type="hidden" name="site_id" value={siteId} />

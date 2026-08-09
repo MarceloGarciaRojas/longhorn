@@ -16,6 +16,11 @@ import {
 import { normalizeHostname } from "@/src/tenancy/public-host";
 import { rendererIsCompatible } from "./renderer-manifest";
 import {
+  rendererPublicationIsAllowed,
+  templateCatalogOrder,
+  templateSelectionIsAllowed,
+} from "./template-capabilities";
+import {
   contentMediaReferences,
   copyDraftMediaToPublication,
   copyPublicationMediaReferences,
@@ -169,7 +174,7 @@ export async function adminTemplateOptions(
        WHERE template.status='active' AND version.status IN ('active','deprecated')
        ORDER BY template.display_name,version.version DESC`,
     );
-    return result.rows;
+    return result.rows.sort(templateCatalogOrder);
   });
 }
 
@@ -249,6 +254,9 @@ export async function adminAssignTemplate(
           correlationId,
         });
         return { rejected: true as const };
+      }
+      if (!templateSelectionIsAllowed(selected)) {
+        throw new OperationValidationError("denied");
       }
       const replay = await client.query<{ siteId: string }>(
         `SELECT site_id AS "siteId" FROM public.site_template_assignments
@@ -534,13 +542,15 @@ export async function clientCompatibleTemplates(
     );
     return {
       currentTemplateVersionId: current.templateVersionId,
-      options: result.rows.filter((option) =>
-        rendererIsCompatible(
-          option.rendererKey,
-          current.schemaKey,
-          current.schemaVersion,
-        ),
-      ),
+      options: result.rows
+        .filter((option) =>
+          rendererIsCompatible(
+            option.rendererKey,
+            current.schemaKey,
+            current.schemaVersion,
+          ),
+        )
+        .sort(templateCatalogOrder),
     };
   });
 }
@@ -723,13 +733,15 @@ async function clientCompatibleTemplatesInTransaction(
   );
   return {
     currentTemplateVersionId: current.rows[0].templateVersionId,
-    options: options.rows.filter((option) =>
-      rendererIsCompatible(
-        option.rendererKey,
-        current.rows[0].schemaKey,
-        current.rows[0].schemaVersion,
-      ),
-    ),
+    options: options.rows
+      .filter((option) =>
+        rendererIsCompatible(
+          option.rendererKey,
+          current.rows[0].schemaKey,
+          current.rows[0].schemaVersion,
+        ),
+      )
+      .sort(templateCatalogOrder),
   };
 }
 
@@ -746,6 +758,9 @@ export async function clientChangeTemplate(
     const catalog = await clientCompatibleTemplatesInTransaction(client, siteId);
     const option = catalog?.options.find((item) => item.id === templateVersionId);
     if (!catalog || !option) throw new OperationValidationError("not_found");
+    if (!templateSelectionIsAllowed(option)) {
+      throw new OperationValidationError("denied");
+    }
     const current = await client.query<{
       id: string;
       version: number;
@@ -1144,7 +1159,10 @@ export async function publishContentTransaction(
   if (!row || row.revision !== input.expectedRevision) {
     return { siteId: input.siteId, rejected: "revision" };
   }
-  if (!rendererIsCompatible(row.rendererKey, row.schemaKey, row.schemaVersion)) {
+  if (
+    !rendererIsCompatible(row.rendererKey, row.schemaKey, row.schemaVersion) ||
+    !rendererPublicationIsAllowed(row.rendererKey)
+  ) {
     return { siteId: input.siteId, rejected: "renderer" };
   }
   let content: RestaurantAnyContent;
@@ -1306,11 +1324,15 @@ export async function restorePublication(
         [sourcePublicationId, siteId],
       );
       const row = source.rows[0];
-      if (!row || !rendererIsCompatible(
-        row.rendererKey,
-        row.schemaKey,
-        row.schemaVersion,
-      )) return { rejected: "source" as const };
+      if (
+        !row ||
+        !rendererIsCompatible(
+          row.rendererKey,
+          row.schemaKey,
+          row.schemaVersion,
+        ) ||
+        !rendererPublicationIsAllowed(row.rendererKey)
+      ) return { rejected: "source" as const };
       const content = validateContentForSchema(
         row.schemaKey,
         row.schemaVersion,

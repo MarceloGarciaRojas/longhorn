@@ -7,13 +7,14 @@ import { createAuthSession } from "../../src/auth/auth-repository.server";
 import { createSessionToken, hashSessionToken } from "../../src/auth/security";
 import type { AuthSession } from "../../src/auth/types";
 import {
+  clientChangeTemplate,
   clientContentWorkspace,
   resolvePublicSite,
-  saveContentDraft,
 } from "../../src/content/service.server";
 import { readDatabaseUrl } from "../../src/db/config";
 import { createDatabasePool } from "../../src/db/pool";
 import {
+  adminOnboardingOptions,
   adminCase,
   clientOnboarding,
   convertIntake,
@@ -228,6 +229,15 @@ test("Etapa 9A completes an isolated, revision-bound onboarding flow", async (t)
     activeTenantId: SYNTHETIC_DATA.tenantA.id,
     activeTenantName: SYNTHETIC_DATA.tenantA.displayName,
   });
+  const onboardingOptions = await adminOnboardingOptions(admin);
+  assert.equal(onboardingOptions.templates.length, 3);
+  assert.equal(
+    onboardingOptions.templates.some(
+      (template) =>
+        template.id === SYNTHETIC_DATA.templateRestaurantEditorialV1.id,
+    ),
+    true,
+  );
 
   const before = await migrationPool.query<{
     tenants: number;
@@ -367,7 +377,7 @@ test("Etapa 9A completes an isolated, revision-bound onboarding flow", async (t)
     tenant_slug: "restaurante-reintento-ficticio",
     site_slug: "restaurante-reintento-ficticio",
     plan_id: SYNTHETIC_DATA.planEssential.id,
-    template_version_id: SYNTHETIC_DATA.templateRestaurantV2.id,
+    template_version_id: SYNTHETIC_DATA.templateRestaurantEditorialV1.id,
     assigned_admin_user_id: SYNTHETIC_DATA.userAdmin.id,
     priority: "normal",
     idempotency_key: randomUUID(),
@@ -440,7 +450,7 @@ test("Etapa 9A completes an isolated, revision-bound onboarding flow", async (t)
     tenant_slug: "restaurante-aurora-ficticio",
     site_slug: "restaurante-aurora-ficticio",
     plan_id: SYNTHETIC_DATA.planEssential.id,
-    template_version_id: SYNTHETIC_DATA.templateRestaurantV2.id,
+    template_version_id: SYNTHETIC_DATA.templateRestaurantEditorialV1.id,
     assigned_admin_user_id: SYNTHETIC_DATA.userAdmin.id,
     priority: "normal",
     idempotency_key: randomUUID(),
@@ -667,22 +677,39 @@ test("Etapa 9A completes an isolated, revision-bound onboarding flow", async (t)
 
   const contentWorkspace = await clientContentWorkspace(client, converted.siteId);
   assert.ok(contentWorkspace?.draft);
-  const modifiedContent = structuredClone(contentWorkspace.draft.content);
-  modifiedContent.seo.description =
-    "Descripción modificada para invalidar la primera aprobación.";
-  await saveContentDraft(
+  assert.equal(
+    contentWorkspace.assignment?.rendererKey,
+    "restaurant-editorial-v1",
+  );
+  await clientChangeTemplate(
     client,
     form({
       site_id: converted.siteId,
-      revision: String(contentWorkspace.draft.revision),
+      template_version_id: SYNTHETIC_DATA.templateRestaurantModernV1.id,
+      assignment_version: String(contentWorkspace.assignment!.version),
       idempotency_key: randomUUID(),
-      content_json: JSON.stringify(modifiedContent),
     }),
-    "onboarding-invalidate-approval",
+    "onboarding-editorial-to-modern-invalidates-approval",
   );
   current = await adminCase(admin, converted.caseId);
   assert.equal(current?.status, "preparing");
   assert.equal(current?.approvalStatus, null);
+  const modernWorkspace = await clientContentWorkspace(client, converted.siteId);
+  assert.equal(modernWorkspace?.assignment?.rendererKey, "restaurant-modern-v1");
+  await clientChangeTemplate(
+    client,
+    form({
+      site_id: converted.siteId,
+      template_version_id: SYNTHETIC_DATA.templateRestaurantEditorialV1.id,
+      assignment_version: String(modernWorkspace!.assignment!.version),
+      idempotency_key: randomUUID(),
+    }),
+    "onboarding-modern-to-editorial",
+  );
+  assert.equal(
+    (await clientContentWorkspace(client, converted.siteId))?.assignment?.rendererKey,
+    "restaurant-editorial-v1",
+  );
   await assert.rejects(
     markReadyToPublish(
       admin,
@@ -701,13 +728,13 @@ test("Etapa 9A completes an isolated, revision-bound onboarding flow", async (t)
     admin,
     form({
       case_id: converted.caseId,
-      draft_revision: String(contentWorkspace.draft.revision + 1),
+      draft_revision: String(contentWorkspace.draft.revision),
       idempotency_key: randomUUID(),
       confirm_replace: "true",
     }),
     "onboarding-regenerate",
   );
-  assert.equal(regenerated.draftRevision, contentWorkspace.draft.revision + 2);
+  assert.equal(regenerated.draftRevision, contentWorkspace.draft.revision + 1);
   current = await adminCase(admin, converted.caseId);
   await requestClientApproval(
     admin,

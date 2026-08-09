@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -16,6 +16,36 @@ const IDS = {
   siteId: "22222222-2222-4222-8222-222222222222",
   assetId: "33333333-3333-4333-8333-333333333333",
 };
+
+const STATIC_IMAGE_EXTENSIONS = [
+  ".avif",
+  ".bmp",
+  ".gif",
+  ".ico",
+  ".jpeg",
+  ".jpg",
+  ".png",
+  ".svg",
+  ".tif",
+  ".tiff",
+  ".webp",
+];
+
+async function listStaticImages(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const results = await Promise.all(
+    entries.map(async (entry) => {
+      const path = resolve(directory, entry.name);
+      if (entry.isDirectory()) return listStaticImages(path);
+      return STATIC_IMAGE_EXTENSIONS.some((extension) =>
+        entry.name.toLowerCase().endsWith(extension)
+      )
+        ? [path]
+        : [];
+    }),
+  );
+  return results.flat();
+}
 
 test("JPEG, PNG and WebP are normalized without metadata into three variants", async () => {
   process.env.APP_ENV = "test";
@@ -79,4 +109,43 @@ test("spoofed MIME, SVG, GIF and malformed input are rejected", async () => {
       MediaRejectedError,
     );
   }
+});
+
+test("Longhorn does not require vinext static image metadata support", async () => {
+  const images = (await Promise.all([
+    listStaticImages(resolve(process.cwd(), "app")),
+    listStaticImages(resolve(process.cwd(), "src")),
+  ])).flat();
+  assert.deepEqual(
+    images,
+    [],
+    "Static app/src images require restoring a safe image metadata implementation",
+  );
+});
+
+test("the vinext static image paths remain explicitly fail-closed", async () => {
+  const [patch, imageImportRuntime, metadataRuntime] = await Promise.all([
+    readFile(resolve(process.cwd(), "patches", "vinext@0.0.50.patch"), "utf8"),
+    readFile(resolve(process.cwd(), "node_modules", "vinext", "dist", "index.js"), "utf8"),
+    readFile(
+      resolve(
+        process.cwd(),
+        "node_modules",
+        "vinext",
+        "dist",
+        "server",
+        "metadata-route-build-data.js",
+      ),
+      "utf8",
+    ),
+  ]);
+  for (const source of [patch, imageImportRuntime]) {
+    assert.match(source, /Static image imports are disabled until a safe synchronous metadata reader is available/);
+  }
+  for (const source of [patch, metadataRuntime]) {
+    assert.match(source, /Static metadata images are disabled/);
+  }
+  assert.doesNotMatch(imageImportRuntime, /import\("image-size"\)/);
+  assert.doesNotMatch(metadataRuntime, /from "image-size"/);
+  assert.doesNotMatch(imageImportRuntime, /width:\s*0,\s*height:\s*0/);
 });

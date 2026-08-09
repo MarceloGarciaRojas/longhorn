@@ -12,6 +12,8 @@ const baseUrl = `http://127.0.0.1:${port}`;
 const mediaUrl = `http://127.0.0.1:${mediaPort}`;
 const clientAPassword = randomBytes(24).toString("base64url");
 const clientBPassword = randomBytes(24).toString("base64url");
+const adminPassword = randomBytes(24).toString("base64url");
+const adminTotp = "725194";
 let server;
 let mediaServer;
 let serverOutput = "";
@@ -36,7 +38,12 @@ async function ready(url, label) {
   throw new Error(`${label} did not start`);
 }
 
-async function login(email, password) {
+async function login(
+  email,
+  password,
+  audience = "client_admin",
+  oneTimeCode = "",
+) {
   const response = await fetch(`${baseUrl}/api/auth/login`, {
     method: "POST",
     redirect: "manual",
@@ -45,9 +52,10 @@ async function login(email, password) {
       "content-type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
-      audience: "client_admin",
+      audience,
       email,
       password,
+      one_time_code: oneTimeCode,
     }),
   });
   return cookieFrom(response);
@@ -126,6 +134,12 @@ test.before(async () => {
             password: clientBPassword,
             subject: "test-client-b",
           },
+          {
+            email: "admin.nexi@example.invalid",
+            password: adminPassword,
+            subject: "test-admin",
+            oneTimeCode: adminTotp,
+          },
         ]),
       },
       stdio: ["ignore", "pipe", "pipe"],
@@ -151,7 +165,14 @@ test.after(async () => {
 test("client uploads, references, publishes and switches template without cross-tenant leakage", async () => {
   const clientA = await login("ana.demo@example.invalid", clientAPassword);
   const clientB = await login("bruno.demo@example.invalid", clientBPassword);
+  const admin = await login(
+    "admin.nexi@example.invalid",
+    adminPassword,
+    "nexi_admin",
+    adminTotp,
+  );
   const siteId = "72222222-2222-4222-8222-222222222222";
+  const editorialVersionId = "a8aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const pool = new Pool({ connectionString: process.env.DATABASE_MIGRATION_URL, max: 1 });
   try {
     const original = await pool.query(
@@ -159,6 +180,107 @@ test("client uploads, references, publishes and switches template without cross-
       [siteId],
     );
     const originalPublicationId = original.rows[0].current_publication_id;
+    const catalog = await page(`/cuenta/sitios/${siteId}/plantillas`, clientB);
+    const catalogHtml = await catalog.text();
+    assert.equal(catalog.status, 200);
+    assert.match(catalogHtml, /Restaurante Editorial/);
+    assert.doesNotMatch(catalogHtml, /no seleccionable/);
+    assert.match(
+      catalogHtml,
+      new RegExp(
+        `template_version_id" value="${editorialVersionId}"[\\s\\S]{0,800}Seleccionar`,
+      ),
+    );
+    assert.equal(
+      (await page(`/cuenta/sitios/${siteId}/plantillas`, clientA)).status,
+      404,
+    );
+    const clientEditorialPreview = await page(
+      `/cuenta/sitios/${siteId}/plantillas/${editorialVersionId}/preview`,
+      clientB,
+    );
+    const clientEditorialHtml = await clientEditorialPreview.text();
+    assert.equal(clientEditorialPreview.status, 200);
+    assert.match(clientEditorialHtml, /Vista previa privada/);
+    assert.match(clientEditorialHtml, /noindex/i);
+    assert.equal(
+      (await page(
+        `/cuenta/sitios/${siteId}/plantillas/${editorialVersionId}/preview`,
+        clientA,
+      )).status,
+      404,
+    );
+    assert.ok(
+      [303, 307, 308].includes(
+        (await page(
+          `/cuenta/sitios/${siteId}/plantillas/${editorialVersionId}/preview`,
+          "",
+        )).status,
+      ),
+    );
+    const adminCatalog = await page(`/nexi-interno/sitios/${siteId}`, admin);
+    const adminCatalogHtml = await adminCatalog.text();
+    assert.equal(adminCatalog.status, 200);
+    assert.match(
+      adminCatalogHtml,
+      new RegExp(
+        `/nexi-interno/sitios/${siteId}/plantillas/${editorialVersionId}/preview`,
+      ),
+    );
+    assert.match(adminCatalogHtml, /Restaurante Editorial/);
+    assert.doesNotMatch(adminCatalogHtml, /no seleccionable/);
+    assert.match(
+      adminCatalogHtml,
+      new RegExp(`option value="${editorialVersionId}"`),
+    );
+    assert.equal(
+      (await page(
+        `/nexi-interno/sitios/${siteId}/plantillas/${editorialVersionId}/preview`,
+        admin,
+      )).status,
+      200,
+    );
+    const protectedState = await pool.query(
+      `SELECT assignment.template_version_id,assignment.version,
+         site.current_publication_id,
+         (SELECT count(*)::int FROM public.site_content_publications publication
+          WHERE publication.site_id=site.id) AS publications
+       FROM public.sites site
+       JOIN public.site_template_assignments assignment
+         ON assignment.site_id=site.id
+       WHERE site.id=$1`,
+      [siteId],
+    );
+    const editorialSelection = await formPost(
+      "/api/client/operations",
+      {
+        action: "template_change",
+        site_id: siteId,
+        template_version_id: editorialVersionId,
+        assignment_version: String(protectedState.rows[0].version),
+        idempotency_key: randomUUID(),
+      },
+      clientB,
+    );
+    assert.equal(editorialSelection.status, 200);
+    assert.deepEqual(
+      (await pool.query(
+        `SELECT assignment.template_version_id,assignment.version,
+           site.current_publication_id,
+           (SELECT count(*)::int FROM public.site_content_publications publication
+            WHERE publication.site_id=site.id) AS publications
+         FROM public.sites site
+         JOIN public.site_template_assignments assignment
+           ON assignment.site_id=site.id
+         WHERE site.id=$1`,
+        [siteId],
+      )).rows[0],
+      {
+        ...protectedState.rows[0],
+        template_version_id: editorialVersionId,
+        version: protectedState.rows[0].version + 1,
+      },
+    );
     const png = await sharp({
       create: { width: 900, height: 600, channels: 4, background: "#257b69" },
     }).png().toBuffer();
@@ -224,6 +346,7 @@ test("client uploads, references, publishes and switches template without cross-
     );
     assert.equal(published.status, 200);
     const publicHtml = await (await page("/sitios/taller-laguna", clientB)).text();
+    assert.match(publicHtml, /editorial-story-title/);
     const publicPath = publicHtml.match(
       new RegExp(`/media/${assetId}/hero/[0-9a-f]{64}`),
     )?.[0];
@@ -236,6 +359,9 @@ test("client uploads, references, publishes and switches template without cross-
       (await fetch(`${baseUrl}/media/${assetId}/original/${"a".repeat(64)}`)).status,
       404,
     );
+    const editorialPublicationId = (
+      await pool.query("SELECT current_publication_id FROM public.sites WHERE id=$1", [siteId])
+    ).rows[0].current_publication_id;
 
     const asset = await pool.query("SELECT version FROM public.media_assets WHERE id=$1", [assetId]);
     const archive = await formPost(
@@ -274,6 +400,46 @@ test("client uploads, references, publishes and switches template without cross-
          WHERE site_id=$1 ORDER BY publication_number DESC LIMIT 1`,
         [siteId],
       )).rows[0].id,
+    );
+    assert.match(
+      await (await page("/sitios/taller-laguna", clientB)).text(),
+      /editorial-story-title/,
+    );
+
+    const modernDraft = await pool.query(
+      "SELECT revision FROM public.site_content_drafts WHERE site_id=$1",
+      [siteId],
+    );
+    const modernPublished = await formPost(
+      "/api/client/operations",
+      {
+        action: "content_publish",
+        site_id: siteId,
+        revision: String(modernDraft.rows[0].revision),
+        idempotency_key: randomUUID(),
+      },
+      clientB,
+    );
+    assert.equal(modernPublished.status, 200);
+    assert.doesNotMatch(
+      await (await page("/sitios/taller-laguna", clientB)).text(),
+      /editorial-story-title/,
+    );
+
+    const editorialRestored = await formPost(
+      "/api/client/operations",
+      {
+        action: "content_restore",
+        site_id: siteId,
+        publication_id: editorialPublicationId,
+        idempotency_key: randomUUID(),
+      },
+      clientB,
+    );
+    assert.equal(editorialRestored.status, 200);
+    assert.match(
+      await (await page("/sitios/taller-laguna", clientB)).text(),
+      /editorial-story-title/,
     );
 
     const restored = await formPost(

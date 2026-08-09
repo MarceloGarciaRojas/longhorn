@@ -1,0 +1,56 @@
+diff --git a/dist/index.js b/dist/index.js
+index e5cc33beb23b5e5ae18f455298d53426f88f2418..4c60fe23738e47e566c9429e838d158805549bda 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1293,20 +1293,7 @@ function vinext(options = {}) {
+ 				const imagePath = id.replace("\0vinext-image-meta:", "");
+ 				const cache = imageImportDimCache;
+ 				let dims = cache.get(imagePath);
+-				if (!dims) try {
+-					const { imageSize } = await import("image-size");
+-					const result = imageSize(fs.readFileSync(imagePath));
+-					dims = {
+-						width: result.width ?? 0,
+-						height: result.height ?? 0
+-					};
+-					cache.set(imagePath, dims);
+-				} catch {
+-					dims = {
+-						width: 0,
+-						height: 0
+-					};
+-				}
++				if (!dims) throw new Error("[vinext] Static image imports are disabled until a safe synchronous metadata reader is available");
+ 				return `export default ${JSON.stringify(dims)};`;
+ 			},
+ 			transform: {
+diff --git a/dist/server/metadata-route-build-data.js b/dist/server/metadata-route-build-data.js
+index 307bc4b395af739873fec6e932099867050a1149..ba4b000cd8dcfd70b3a6819e1f9bb0d92e892d74 100644
+--- a/dist/server/metadata-route-build-data.js
++++ b/dist/server/metadata-route-build-data.js
+@@ -2,7 +2,6 @@ import { routePatternParts } from "../routing/route-pattern.js";
+ import { getMetadataRouteKind } from "./metadata-routes.js";
+ import fs from "node:fs";
+ import { createHash } from "node:crypto";
+-import { imageSize } from "image-size";
+ //#region src/server/metadata-route-build-data.ts
+ function createMetadataContentHash(buffer) {
+ 	return createHash("sha1").update(buffer).digest("hex").slice(0, 16);
+@@ -27,16 +26,7 @@ function readMetadataRouteAltText(route) {
+ 	return route.altFilePath ? readMetadataRouteTextFile(route.altFilePath, route) : void 0;
+ }
+ function readMetadataImageDimensions(buffer, route) {
+-	try {
+-		const dimensions = imageSize(buffer);
+-		return {
+-			width: dimensions.width,
+-			height: dimensions.height
+-		};
+-	} catch (error) {
+-		const reason = error instanceof Error && error.message ? `: ${error.message}` : "";
+-		throw new Error(`[vinext] Failed to read metadata image dimensions for ${route.filePath} (${route.servedUrl})${reason}`, { cause: error });
+-	}
++	throw new Error(`[vinext] Static metadata images are disabled for ${route.filePath} (${route.servedUrl}) until a safe synchronous metadata reader is available`);
+ }
+ function resolveIconSizes(routeKind, isSvgRoute, dimensions) {
+ 	if (routeKind !== "favicon" && routeKind !== "icon" && routeKind !== "apple") return;

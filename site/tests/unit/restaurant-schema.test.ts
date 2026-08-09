@@ -7,6 +7,8 @@ import {
   validateRestaurantContent,
 } from "../../src/content/restaurant-schema";
 import {
+  createRendererManifest,
+  DuplicateRendererError,
   rendererIsCompatible,
   requireCompatibleRenderer,
   UnknownRendererError,
@@ -183,5 +185,20 @@ test("renderer registry is explicit and rejects unknown or incompatible keys", (
     () =>
       requireCompatibleRenderer("unknown-renderer", RESTAURANT_SCHEMA_KEY, 1),
     UnknownRendererError,
+  );
+  assert.throws(
+    () => createRendererManifest([
+      ["duplicated-renderer", {
+        schemaKey: RESTAURANT_SCHEMA_KEY,
+        minimumSchemaVersion: 1,
+        maximumSchemaVersion: 1,
+      }],
+      ["duplicated-renderer", {
+        schemaKey: RESTAURANT_SCHEMA_KEY,
+        minimumSchemaVersion: 1,
+        maximumSchemaVersion: 1,
+      }],
+    ]),
+    DuplicateRendererError,
   );
 });
