@@ -101,9 +101,9 @@ contraste antes de aprobar cada combinación.
 
 ## 3. Contrato conceptual de contenido `gym.v1`
 
-`gym.v1` será un contrato tipado y validado. El nombre es tentativo hasta que
-la ampliación de alcance sea autorizada. No existe todavía en código ni base de
-datos.
+`gym.v1` será un contrato tipado y validado. Su nombre queda aprobado por la
+autorización de ampliación del alcance B1 registrada en la sección 21.2. No
+existe todavía en código ni base de datos.
 
 ### 3.1 Estructura mínima
 
@@ -649,7 +649,7 @@ dependencias ni el runtime del ZIP original.
 | Escaneo de secretos | Aprobado; 274 archivos de texto revisados |
 | `pnpm audit --audit-level low` | Aprobada; 0 vulnerabilidades conocidas |
 | Enlaces Markdown modificados | Aprobados; todos los destinos locales existen |
-| Archivos grandes modificados | Ninguno; contrato 36.129 bytes e índice 8.846 bytes |
+| Archivos grandes modificados | Ninguno; contrato 36.162 bytes e índice 8.846 bytes |
 | `git diff --check` | Aprobada |
 | Alcance del diff | Contrato, estado en `docs/README.md` y única regla de alcance en `AGENTS.md` |
 
