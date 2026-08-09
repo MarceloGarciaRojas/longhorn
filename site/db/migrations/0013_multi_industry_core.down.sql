@@ -174,6 +174,9 @@ BEGIN
 END
 $function$;
 
+DROP TRIGGER templates_industry_consistency ON public.templates;
+DROP FUNCTION app_private.enforce_template_industry_consistency();
+
 DROP TRIGGER sites_industry_consistency ON public.sites;
 DROP FUNCTION app_private.enforce_site_industry_consistency();
 

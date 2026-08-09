@@ -74,6 +74,31 @@ CREATE TRIGGER sites_industry_consistency
   BEFORE UPDATE OF industry_key ON public.sites
   FOR EACH ROW EXECUTE FUNCTION app_private.enforce_site_industry_consistency();
 
+CREATE FUNCTION app_private.enforce_template_industry_consistency()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $function$
+BEGIN
+  IF NEW.industry_key IS NOT DISTINCT FROM OLD.industry_key THEN
+    RETURN NEW;
+  END IF;
+  IF EXISTS(
+    SELECT 1
+    FROM public.template_versions version
+    JOIN public.site_template_assignments assignment
+      ON assignment.template_version_id=version.id
+    JOIN public.sites site ON site.id=assignment.site_id
+    WHERE version.template_id=NEW.id
+      AND site.industry_key <> NEW.industry_key
+  ) THEN
+    RAISE EXCEPTION 'template industry incompatible with assignment'
+      USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END
+$function$;
+CREATE TRIGGER templates_industry_consistency
+  BEFORE UPDATE OF industry_key ON public.templates
+  FOR EACH ROW EXECUTE FUNCTION app_private.enforce_template_industry_consistency();
+
 CREATE OR REPLACE FUNCTION app_private.protect_client_site_operation_fields()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog
 AS $function$

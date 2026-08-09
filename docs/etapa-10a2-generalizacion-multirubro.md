@@ -184,3 +184,10 @@ el SHA funcional exacto. El PR #6 permaneció abierto, en borrador y sin
 conversaciones pendientes durante la auditoría; no hubo deployments y no se
 realizó merge. Cualquier commit documental posterior a esta evidencia deberá
 obtener su propia CI antes de marcar el PR como listo para revisión.
+
+La revisión humana posterior detectó que el cambio de `industry_key` de una
+plantilla ya asignada podía dejar una asignación histórica incoherente. La
+migración `0013` incorpora una protección simétrica en `public.templates`: el
+trigger rechaza con SQLSTATE `23514` cualquier cambio incompatible con los
+sitios asignados. La migración descendente elimina explícitamente ese trigger y
+su función, y la suite de migraciones cubre el caso como regresión.

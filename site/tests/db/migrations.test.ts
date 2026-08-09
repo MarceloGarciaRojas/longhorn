@@ -444,6 +444,24 @@ test("versioned migrations create only the approved domain schema", async (t) =>
     );
     await client.query("ROLLBACK TO SAVEPOINT cross_industry_assignment");
 
+    await client.query("SAVEPOINT assigned_template_industry_change");
+    await expectPgCode(
+      () => client.query(
+        `UPDATE public.templates
+         SET industry_key='gym'
+         WHERE id=(
+           SELECT template_id
+           FROM public.template_versions
+           WHERE id=$1
+         )`,
+        [SYNTHETIC_DATA.templateRestaurantV2.id],
+      ),
+      "23514",
+    );
+    await client.query(
+      "ROLLBACK TO SAVEPOINT assigned_template_industry_change",
+    );
+
     await client.query("ROLLBACK");
   } finally {
     client.release();
