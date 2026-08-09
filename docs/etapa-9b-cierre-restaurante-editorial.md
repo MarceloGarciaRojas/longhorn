@@ -34,6 +34,16 @@ El catálogo local/CI contiene exactamente:
 | Modern | Sí | Sí | Sí | Sí | Sí |
 | Restaurante Editorial | Sí | Sí | Sí | Sí | Sí |
 
+### Estados diferenciados
+
+- **Estado técnico:** tres plantillas de restaurante están operativas en local
+  y CI; Restaurante Editorial admite preview, selección, publicación,
+  restauración y onboarding.
+- **Estado comercial:** la landing pública conserva la oferta anterior de dos
+  plantillas y no anuncia Restaurante Editorial como disponibilidad comercial.
+- **Estado ambiental:** staging, producción y proveedores productivos continúan
+  sin autorización.
+
 ## 2. Desarrollo incremental
 
 ### 9B.1 — Contrato visual y técnico

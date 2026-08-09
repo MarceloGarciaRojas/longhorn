@@ -1,7 +1,9 @@
 # Reglas del Proyecto Longhorn
 
 - Longhorn es una plataforma SaaS B2B multi-tenant para pymes.
-- La etapa actual corresponde exclusivamente a la preparación documental del proyecto.
+- La Etapa 9B está funcionalmente aprobada para local y CI: Restaurante Editorial puede previsualizarse, seleccionarse, publicarse, restaurarse y utilizarse en onboarding.
+- `restaurant.v2` permanece como contrato de contenido y `restaurant_onboarding.v1` como contrato de incorporación.
+- Esta habilitación no constituye disponibilidad comercial y no autoriza staging, producción ni proveedores productivos.
 - No se debe iniciar desarrollo funcional sin una tarea explícitamente aprobada.
 - La arquitectura prevista para el MVP será una aplicación web responsiva, TypeScript, monolito modular, PostgreSQL y aislamiento multi-tenant mediante `tenant_id` y Row Level Security.
 - Nunca se debe confiar en `tenant_id` enviado por el navegador.

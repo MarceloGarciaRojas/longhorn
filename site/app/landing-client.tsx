@@ -20,7 +20,7 @@ const modules = [
 const faqs = [
   ["¿Qué es nexi?", "nexi es una propuesta SaaS B2B para ayudar a pymes a ordenar su presencia y operación digital desde una experiencia simple."],
   ["¿Cómo comienza la incorporación?", "Envías una solicitud inicial y el equipo nexi la revisa antes de crear cualquier cuenta, sitio o recurso operativo."],
-  ["¿Qué incluye esta etapa?", "El alcance inicial considera restaurantes y tres plantillas, con una puesta en marcha asistida y aprobación previa a la publicación."],
+  ["¿Qué incluye esta etapa?", "El alcance inicial considera restaurantes y dos plantillas, con una puesta en marcha asistida y aprobación previa a la publicación."],
 ];
 
 function Brand({ inverse = false }: { inverse?: boolean }) {
@@ -63,7 +63,7 @@ function Landing({ go }: { go: (view: View) => void }) {
 
       <section className="section process" id="proceso">
         <span className="kicker">Proceso acompañado</span><h2>Del diagnóstico a una experiencia lista para validar.</h2>
-        <div className="steps">{[["01", "Entendemos", "Revisamos el flujo real del rubro piloto."], ["02", "Configuramos", "Elegimos una de las tres plantillas disponibles."], ["03", "Validamos", "Revisamos contenido y aprobación antes de publicar."]].map(([n,t,c]) => <article key={n}><span>{n}</span><h3>{t}</h3><p>{c}</p></article>)}</div>
+        <div className="steps">{[["01", "Entendemos", "Revisamos el flujo real del rubro piloto."], ["02", "Configuramos", "Elegimos una de las dos plantillas disponibles."], ["03", "Validamos", "Revisamos contenido y aprobación antes de publicar."]].map(([n,t,c]) => <article key={n}><span>{n}</span><h3>{t}</h3><p>{c}</p></article>)}</div>
       </section>
 
       <section className="section plans" id="planes">
@@ -73,7 +73,7 @@ function Landing({ go }: { go: (view: View) => void }) {
 
       <section className="section faq" id="faq"><div><span className="kicker">Preguntas frecuentes</span><h2>Lo esencial, sin letra pequeña.</h2><p>El rubro piloto funciona mediante una incorporación asistida y controlada por el equipo nexi.</p></div><div className="faq-list">{faqs.map(([q,a], i) => <article key={q}><button aria-expanded={openFaq === i} onClick={() => setOpenFaq(openFaq === i ? null : i)}><b>{q}</b><span>{openFaq === i ? "−" : "+"}</span></button>{openFaq === i && <p>{a}</p>}</article>)}</div></section>
 
-      <section className="section news" id="noticias"><div><span className="kicker">Noticias nexi</span><h2>Avances del proyecto.</h2></div><div className="news-grid"><article><span>Diseño · Julio 2026</span><h3>Nueva experiencia visual en validación</h3><p>Estamos probando una interfaz más simple, intuitiva y consistente para el rubro piloto.</p><a href="#inicio">Leer actualización <b>→</b></a></article><article><span>Producto · Próximamente</span><h3>Evolución de las tres plantillas disponibles</h3><p>Los siguientes hitos mejorarán el contenido y alcance de cada alternativa sin crear copias por cliente.</p><a href="#planes">Conocer los planes <b>→</b></a></article></div></section>
+      <section className="section news" id="noticias"><div><span className="kicker">Noticias nexi</span><h2>Avances del proyecto.</h2></div><div className="news-grid"><article><span>Diseño · Julio 2026</span><h3>Nueva experiencia visual en validación</h3><p>Estamos probando una interfaz más simple, intuitiva y consistente para el rubro piloto.</p><a href="#inicio">Leer actualización <b>→</b></a></article><article><span>Producto · Próximamente</span><h3>Evolución de las dos plantillas disponibles</h3><p>Los siguientes hitos mejorarán el contenido y alcance de cada alternativa sin crear copias por cliente.</p><a href="#planes">Conocer los planes <b>→</b></a></article></div></section>
 
       <section className="cta"><span className="kicker">Construyamos claridad</span><h2>Comienza la incorporación de tu pyme.</h2><a className="pill light" href="/comenzar">Enviar solicitud <span>→</span></a></section>
     </main>
