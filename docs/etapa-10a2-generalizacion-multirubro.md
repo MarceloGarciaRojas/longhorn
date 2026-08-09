@@ -4,7 +4,7 @@
 - **Marca visible:** nexi
 - **Etapa:** 10A.2
 - **Fecha:** 2026-08-09
-- **Estado:** **IMPLEMENTADA Y VALIDADA LOCALMENTE; REVISIÓN HUMANA PENDIENTE**
+- **Estado:** **AUDITADA; LISTA PARA REVISIÓN HUMANA**
 - **Base:** `ffd7e7138f000878d2ea31b505d7ed3c9ddadd6f`
 - **Rama:** `codex/etapa-10a2-generalizacion-multirubro`
 
@@ -151,3 +151,36 @@ La siguiente etapa solo puede comenzar tras revisión humana de este cambio. La
 implementación de `gym.v1` deberá registrar de forma explícita su schema,
 renderer, extractor multimedia, contrato editorial y pruebas, sin relajar los
 controles fail-closed establecidos aquí.
+
+## 10. Evidencia de cierre 10A.2-M
+
+La Puerta 10A.2-M auditó el commit funcional
+`e37d683c1a8078c7437e992c5f0e06abaca66d0f` contra la base
+`ffd7e7138f000878d2ea31b505d7ed3c9ddadd6f` y confirmó:
+
+**INDUSTRIAS RECONOCIDAS:**
+
+- `restaurant`;
+- `gym`.
+
+**RESTAURANT:** **OPERATIVO**
+
+**GYM:** **INFRAESTRUCTURA PREPARADA; IMPLEMENTACIÓN FUNCIONAL NO INICIADA**
+
+La cadena local equivalente a CI se ejecutó con Node `24.14.0`, pnpm `11.9.0`
+y PostgreSQL `17.10`. El resultado fue 176/176 ejecuciones aprobadas: 56 de
+`pnpm verify`, 110 de las suites DB, autenticación, paneles, operaciones,
+contenido, multimedia, plantillas y onboarding, y 10 E2E. La secuencia de
+migración `0013 up → down → up`, los seeds, el aislamiento RLS, los cruces de
+tenant e industria y la regresión de Classic, Modern y Editorial aprobaron.
+
+La auditoría de dependencias informó `critical=0`, `high=0`, `moderate=0` y
+`low=0`. El escaneo de secretos revisó 279 archivos de texto; lint terminó con
+cero errores y las seis advertencias `no-img-element` heredadas. Lockfile,
+patches y ZIP Pulso Club permanecieron intactos.
+
+El workflow `CI` (`31339140751`) y su job `Verify application` aprobaron sobre
+el SHA funcional exacto. El PR #6 permaneció abierto, en borrador y sin
+conversaciones pendientes durante la auditoría; no hubo deployments y no se
+realizó merge. Cualquier commit documental posterior a esta evidencia deberá
+obtener su propia CI antes de marcar el PR como listo para revisión.
