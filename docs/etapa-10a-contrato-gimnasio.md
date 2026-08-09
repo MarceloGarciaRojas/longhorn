@@ -4,14 +4,15 @@
 - **Marca visible:** nexi
 - **Etapa:** 10A.1
 - **Fecha:** 2026-08-08
-- **Estado:** **CONTRATO GIMNASIO DEFINIDO; IMPLEMENTACIÓN NO AUTORIZADA**
+- **Estado:** **CONTRATO APROBADO Y ALCANCE B1 AUTORIZADO; IMPLEMENTACIÓN NO INICIADA**
 - **Naturaleza:** análisis, contrato y diseño técnico
 - **Base analizada:** `444afcd5a25ee97631db60becf8153f71ce3e717`
 
 Este documento fija el contrato que una futura incorporación del rubro Gimnasio
-deberá respetar. No incorpora el proyecto Pulso Club al runtime, no implementa
-`gym.v1`, no generaliza el núcleo y no autoriza migraciones, staging ni
-producción.
+deberá respetar y registra la autorización de alcance concedida posteriormente
+por el Product Owner. No incorpora el proyecto Pulso Club al runtime, no
+implementa `gym.v1`, no generaliza el núcleo y no autoriza dentro de este Pull
+Request migraciones, staging ni producción.
 
 ## 1. Identidad e integridad del insumo
 
@@ -536,7 +537,7 @@ aprobadas del original en una etapa que autorice su ejecución controlada.
 
 | Riesgo | Nivel | Mitigación contractual |
 | --- | --- | --- |
-| Ampliación no autorizada del MVP | Crítico | Bloqueo expreso antes de cualquier implementación |
+| Iniciar implementación antes de integrar el contrato | Crítico | Revisión humana y merge explícitamente autorizados antes de 10A.2 |
 | Regresión de las tres plantillas restaurant | Alto | Generalización mínima y matriz de regresión obligatoria |
 | Importar `/admin` o persistencia simulada | Alto | Exclusión explícita y revisión de rutas públicas |
 | Mezclar contenido informativo con reservas | Alto | CTA de solicitud y ausencia de entidades operacionales |
@@ -549,17 +550,75 @@ aprobadas del original en una etapa que autorice su ejecución controlada.
 | Módulo de leads todavía no definido | Medio | Fallback explícito a contacto sin reserva |
 | Patch Vinext | Bajo para B1 | Evitar imports estáticos con metadata; medios dinámicos |
 
-## 21. Bloqueo de gobierno
+## 21. Trazabilidad de gobierno
 
-El alcance histórico del MVP permanece limitado al rubro restaurante. Este
-contrato no modifica esa decisión ni autoriza desarrollo funcional.
+### 21.1 Estado anterior
+
+Al definirse el contrato en 10A.1, el alcance histórico del MVP estaba limitado
+al rubro restaurante. Se registró expresamente:
+
+**BLOQUEO DE GOBIERNO PENDIENTE.**
 
 **LA IMPLEMENTACIÓN DEL RUBRO GIMNASIO REQUIERE AUTORIZACIÓN EXPRESA DEL PRODUCT
 OWNER PARA AMPLIAR EL ALCANCE B1 DE NEXI.**
 
-La autorización debe anteceder a cualquier migración, generalización del
-núcleo, implementación de `gym.v1`, renderer, catálogo, editor, onboarding o
-integración funcional de Pulso Club.
+Esta evidencia histórica se conserva: el contrato fue definido, el bloqueo fue
+identificado y se solicitó una decisión de producto antes de implementar.
+
+### 21.2 AUTORIZACIÓN DE AMPLIACIÓN DE ALCANCE B1
+
+- **Fecha de autorización:** 2026-08-08, zona horaria America/Santiago.
+- **Estado anterior:** **BLOQUEO DE GOBIERNO PENDIENTE**.
+- **Decisión:** **AUTORIZACIÓN OTORGADA POR EL PRODUCT OWNER**.
+- **Alcance autorizado:** incorporación del rubro Gimnasio B1 conforme al
+  contrato aprobado en la Etapa 10A.1.
+- **Estado funcional:** **IMPLEMENTACIÓN NO INICIADA**.
+
+El Product Owner autorizó expresamente:
+
+**AMPLIAR EL ALCANCE B1 DE NEXI PARA INCORPORAR EL RUBRO GIMNASIO CONFORME AL
+CONTRATO APROBADO EN LA ETAPA 10A.1.**
+
+La decisión permite planificar y ejecutar posteriormente, mediante etapas
+separadas y controladas:
+
+- generalización mínima `restaurant + gym`;
+- contrato tipado `gym.v1`;
+- renderer de Gimnasio;
+- catálogo de plantillas gym;
+- adaptación del editor;
+- publicación y restauración compatibles con gym;
+- onboarding de Gimnasio cuando sea autorizado dentro de su secuencia técnica.
+
+La autorización no implementa esas capacidades en este Pull Request. No
+autoriza aquí código de Gimnasio, migraciones, schemas, incorporación del ZIP al
+runtime, staging ni producción.
+
+La trazabilidad completa queda:
+
+1. contrato definido;
+2. bloqueo de gobierno identificado;
+3. autorización solicitada;
+4. autorización concedida por el Product Owner;
+5. implementación todavía no iniciada.
+
+### 21.3 Siguiente etapa técnica permitida
+
+Después de la revisión humana y del merge explícitamente autorizado de este
+contrato, la siguiente etapa será:
+
+**ETAPA 10A.2 — GENERALIZACIÓN MÍNIMA DEL NÚCLEO PARA RESTAURANT + GYM.**
+
+10A.2 deberá ocurrir antes de implementar `gym.v1`, crear el renderer, incorporar
+visualmente Pulso Club o implementar onboarding gym. Su único objetivo será
+permitir que el núcleo deje de estar restringido exclusivamente a restaurant,
+sin romper Classic, Modern ni Restaurante Editorial.
+
+La ampliación futura podrá cubrir `industry_key` para restaurant/gym, contratos
+discriminados, compatibilidad schema/renderer, catálogo por rubro, publicación
+y restauración multi-rubro, multimedia común, editor despachado por rubro y
+seeds compatibles. Cada cambio requerirá regresión completa de las tres
+plantillas de restaurante.
 
 ## 22. Criterios de salida de 10A.1
 
@@ -574,8 +633,9 @@ integración funcional de Pulso Club.
 - deuda Vinext clasificada como no bloqueante para B1;
 - documentación e índice validados;
 - ninguna modificación funcional, dependencia o migración;
-- Pull Request documental en borrador, sin merge;
-- bloqueo de gobierno pendiente y visible.
+- Pull Request documental preparado para revisión humana, sin merge;
+- autorización de alcance versionada con su trazabilidad histórica;
+- implementación funcional todavía no iniciada.
 
 ## 23. Validación documental ejecutada
 
@@ -589,9 +649,9 @@ dependencias ni el runtime del ZIP original.
 | Escaneo de secretos | Aprobado; 274 archivos de texto revisados |
 | `pnpm audit --audit-level low` | Aprobada; 0 vulnerabilidades conocidas |
 | Enlaces Markdown modificados | Aprobados; todos los destinos locales existen |
-| Archivos grandes modificados | Ninguno; contrato 33.476 bytes e índice 8.841 bytes |
+| Archivos grandes modificados | Ninguno; contrato 36.129 bytes e índice 8.846 bytes |
 | `git diff --check` | Aprobada |
-| Alcance del diff | Exclusivamente este contrato y `docs/README.md` |
+| Alcance del diff | Contrato, estado en `docs/README.md` y única regla de alcance en `AGENTS.md` |
 
 Las seis advertencias `no-img-element` corresponden a deuda heredada ya
 documentada y no fueron introducidas por 10A.1.
@@ -599,6 +659,8 @@ documentada y no fueron introducidas por 10A.1.
 ## 24. Declaraciones de cierre
 
 El ZIP original no fue modificado.
+
+La ampliación del alcance B1 al rubro Gimnasio fue autorizada por el Product Owner.
 
 La Landing Gimnasio todavía no fue incorporada al runtime de nexi.
 
@@ -614,8 +676,8 @@ No se habilitó staging.
 
 No se habilitó producción.
 
-No se incorporaron las demás soluciones pendientes.
+No se incorporaron Tienda Online, RestApp, PosApp ni Colegio.
 
 ## 25. Recomendación
 
-**SOLICITAR AUTORIZACIÓN DE AMPLIACIÓN DE ALCANCE B1 AL RUBRO GIMNASIO**
+**AUTORIZAR REVISIÓN HUMANA FINAL E INTEGRACIÓN DEL CONTRATO DE GIMNASIO**
