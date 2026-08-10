@@ -57,6 +57,7 @@ export default async function LocalPublicSitePage({
   }
   return renderRegisteredTemplate({
     rendererKey: site.rendererKey,
+    industryKey: site.industryKey,
     schemaKey: site.schemaKey,
     schemaVersion: site.schemaVersion,
     content: site.content,

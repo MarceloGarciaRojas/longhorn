@@ -19,6 +19,7 @@ import {
   RESTAURANT_V2_SCHEMA_KEY,
   RESTAURANT_V2_SCHEMA_VERSION,
 } from "./types";
+import type { IndustryKey } from "./industry";
 
 export { UnknownRendererError } from "./renderer-manifest";
 
@@ -99,6 +100,7 @@ const REGISTRY = {
 
 export function renderRegisteredTemplate(input: {
   rendererKey: string;
+  industryKey: IndustryKey;
   schemaKey: string;
   schemaVersion: number;
   content: unknown;
@@ -106,7 +108,12 @@ export function renderRegisteredTemplate(input: {
   validationMode?: "draft" | "publication";
   media?: MediaRenderManifest;
 }): ReactNode {
-  requireCompatibleRenderer(input.rendererKey, input.schemaKey, input.schemaVersion);
+  requireCompatibleRenderer(
+    input.rendererKey,
+    input.industryKey,
+    input.schemaKey,
+    input.schemaVersion,
+  );
   const renderer = REGISTRY[input.rendererKey as keyof typeof REGISTRY];
   if (!renderer) throw new UnknownRendererError(input.rendererKey);
   return renderer.render(

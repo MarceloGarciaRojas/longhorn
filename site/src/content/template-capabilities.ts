@@ -6,6 +6,11 @@ import {
   RESTAURANT_MODERN_RENDERER_KEY,
   RESTAURANT_RENDERER_KEY,
 } from "./types";
+import { requireIndustryKey, type IndustryKey } from "./industry";
+import {
+  rendererIsCompatible,
+  rendererSupportsIndustry,
+} from "./renderer-manifest";
 
 const SELECTABLE_RENDERERS = new Set<string>([
   RESTAURANT_RENDERER_KEY,
@@ -29,27 +34,80 @@ const RESTAURANT_CATALOG_ORDER = new Map<string, number>([
 ]);
 
 export function templateSelectionIsAllowed(
-  option: Pick<TemplateOption, "rendererKey" | "status">,
+  option: Pick<
+    TemplateOption,
+    | "industryKey"
+    | "rendererKey"
+    | "schemaKey"
+    | "minimumSchemaVersion"
+    | "maximumSchemaVersion"
+    | "status"
+  >,
 ): boolean {
   return option.status === "active" &&
-    SELECTABLE_RENDERERS.has(option.rendererKey);
+    SELECTABLE_RENDERERS.has(option.rendererKey) &&
+    rendererIsCompatible(
+      option.rendererKey,
+      option.industryKey,
+      option.schemaKey,
+      option.minimumSchemaVersion,
+    ) &&
+    rendererIsCompatible(
+      option.rendererKey,
+      option.industryKey,
+      option.schemaKey,
+      option.maximumSchemaVersion,
+    );
 }
 
-export function rendererPublicationIsAllowed(rendererKey: string): boolean {
-  return PUBLISHABLE_RENDERERS.has(rendererKey);
+export function rendererPublicationIsAllowed(
+  rendererKey: string,
+  industryKey: unknown,
+): boolean {
+  return PUBLISHABLE_RENDERERS.has(rendererKey) &&
+    rendererSupportsIndustry(rendererKey, industryKey);
 }
 
-export function rendererOnboardingIsAllowed(rendererKey: string): boolean {
-  return ONBOARDING_RENDERERS.has(rendererKey);
+export function rendererOnboardingIsAllowed(
+  rendererKey: string,
+  industryKey: unknown,
+): boolean {
+  return ONBOARDING_RENDERERS.has(rendererKey) &&
+    rendererSupportsIndustry(rendererKey, industryKey);
 }
 
 export function templateCatalogOrder(
-  left: Pick<TemplateOption, "templateKey" | "version">,
-  right: Pick<TemplateOption, "templateKey" | "version">,
+  left: Pick<TemplateOption, "industryKey" | "templateKey" | "version">,
+  right: Pick<TemplateOption, "industryKey" | "templateKey" | "version">,
 ): number {
+  if (left.industryKey !== right.industryKey) {
+    return left.industryKey.localeCompare(right.industryKey);
+  }
   const leftRank = RESTAURANT_CATALOG_ORDER.get(left.templateKey) ??
     Number.MAX_SAFE_INTEGER;
   const rightRank = RESTAURANT_CATALOG_ORDER.get(right.templateKey) ??
     Number.MAX_SAFE_INTEGER;
   return leftRank - rightRank || right.version - left.version;
+}
+
+export function compatibleTemplateCatalog(
+  industryValue: unknown,
+  schemaKey: string,
+  schemaVersion: number,
+  options: readonly TemplateOption[],
+): TemplateOption[] {
+  const industryKey: IndustryKey = requireIndustryKey(industryValue);
+  return options
+    .filter((option) =>
+      option.industryKey === industryKey &&
+      option.status === "active" &&
+      rendererIsCompatible(
+        option.rendererKey,
+        industryKey,
+        schemaKey,
+        schemaVersion,
+      ) &&
+      templateSelectionIsAllowed(option)
+    )
+    .sort(templateCatalogOrder);
 }

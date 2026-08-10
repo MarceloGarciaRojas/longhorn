@@ -7,10 +7,17 @@ import {
   RESTAURANT_SCHEMA_VERSION,
   RESTAURANT_V2_SCHEMA_KEY,
   RESTAURANT_V2_SCHEMA_VERSION,
+  type RegisteredContentSchemaKey,
 } from "./types";
+import {
+  isIndustryKey,
+  RESTAURANT_INDUSTRY_KEY,
+  type IndustryKey,
+} from "./industry";
 
 export interface RendererDefinition {
-  schemaKey: string;
+  industryKey: IndustryKey;
+  schemaKey: RegisteredContentSchemaKey;
   minimumSchemaVersion: number;
   maximumSchemaVersion: number;
 }
@@ -44,21 +51,25 @@ export function createRendererManifest(
 
 const RENDERER_MANIFEST = createRendererManifest([
   [RESTAURANT_RENDERER_KEY, {
+    industryKey: RESTAURANT_INDUSTRY_KEY,
     schemaKey: RESTAURANT_SCHEMA_KEY,
     minimumSchemaVersion: RESTAURANT_SCHEMA_VERSION,
     maximumSchemaVersion: RESTAURANT_SCHEMA_VERSION,
   }],
   [RESTAURANT_CLASSIC_V2_RENDERER_KEY, {
+    industryKey: RESTAURANT_INDUSTRY_KEY,
     schemaKey: RESTAURANT_V2_SCHEMA_KEY,
     minimumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
     maximumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
   }],
   [RESTAURANT_MODERN_RENDERER_KEY, {
+    industryKey: RESTAURANT_INDUSTRY_KEY,
     schemaKey: RESTAURANT_V2_SCHEMA_KEY,
     minimumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
     maximumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
   }],
   [RESTAURANT_EDITORIAL_RENDERER_KEY, {
+    industryKey: RESTAURANT_INDUSTRY_KEY,
     schemaKey: RESTAURANT_V2_SCHEMA_KEY,
     minimumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
     maximumSchemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
@@ -71,12 +82,14 @@ export function registeredRendererKeys(): string[] {
 
 export function rendererIsCompatible(
   rendererKey: string,
+  industryKey: unknown,
   schemaKey: string,
   schemaVersion: number,
 ): boolean {
   const renderer = RENDERER_MANIFEST[rendererKey];
   return Boolean(
-    renderer &&
+    renderer && isIndustryKey(industryKey) &&
+    renderer.industryKey === industryKey &&
     renderer.schemaKey === schemaKey &&
     schemaVersion >= renderer.minimumSchemaVersion &&
     schemaVersion <= renderer.maximumSchemaVersion,
@@ -85,11 +98,22 @@ export function rendererIsCompatible(
 
 export function requireCompatibleRenderer(
   rendererKey: string,
+  industryKey: unknown,
   schemaKey: string,
   schemaVersion: number,
 ): RendererDefinition {
-  if (!rendererIsCompatible(rendererKey, schemaKey, schemaVersion)) {
+  if (!rendererIsCompatible(rendererKey, industryKey, schemaKey, schemaVersion)) {
     throw new UnknownRendererError(rendererKey);
   }
   return RENDERER_MANIFEST[rendererKey];
+}
+
+export function rendererSupportsIndustry(
+  rendererKey: string,
+  industryKey: unknown,
+): boolean {
+  const renderer = RENDERER_MANIFEST[rendererKey];
+  return Boolean(
+    renderer && isIndustryKey(industryKey) && renderer.industryKey === industryKey,
+  );
 }

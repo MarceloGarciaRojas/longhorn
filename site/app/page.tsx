@@ -79,6 +79,7 @@ export default async function Home() {
   }
   return renderRegisteredTemplate({
     rendererKey: site.rendererKey,
+    industryKey: site.industryKey,
     schemaKey: site.schemaKey,
     schemaVersion: site.schemaVersion,
     content: site.content,

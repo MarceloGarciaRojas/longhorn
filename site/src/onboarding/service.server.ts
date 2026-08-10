@@ -299,7 +299,7 @@ export async function adminOnboardingOptions(
         plans: plans.rows,
         templates: templates.rows
           .filter((template) =>
-            rendererOnboardingIsAllowed(template.rendererKey),
+            rendererOnboardingIsAllowed(template.rendererKey, "restaurant"),
           )
           .map(({ id, name }) => ({ id, name })),
         admins: admins.rows,
@@ -666,7 +666,7 @@ async function prepareConversionResources(
       );
       if (
         !template.rows[0] ||
-        !rendererOnboardingIsAllowed(template.rows[0].rendererKey)
+        !rendererOnboardingIsAllowed(template.rows[0].rendererKey, "restaurant")
       ) {
         throw new OnboardingOperationError("unsupported");
       }
@@ -1651,6 +1651,7 @@ export async function generateOnboardingDraft(
       }
       if (!rendererIsCompatible(
         current.rendererKey,
+        "restaurant",
         "restaurant.v2",
         2,
       )) {
@@ -1951,7 +1952,12 @@ export async function requestClientApproval(
       if (row.version !== expectedVersion || row.status !== "internal_review" ||
           !row.clientUserId || !row.conversationId ||
           row.schemaKey !== "restaurant.v2" || row.schemaVersion !== 2 ||
-          !rendererIsCompatible(row.rendererKey,row.schemaKey,row.schemaVersion)) {
+          !rendererIsCompatible(
+            row.rendererKey,
+            "restaurant",
+            row.schemaKey,
+            row.schemaVersion,
+          )) {
         throw new OnboardingOperationError("conflict");
       }
       const content = validateRestaurantV2Content(row.content, "publication");
@@ -2236,7 +2242,12 @@ export async function markReadyToPublish(
         row.approvalTemplateId !== row.templateVersionId ||
         row.schemaKey !== "restaurant.v2" ||
         row.schemaVersion !== 2 ||
-        !rendererIsCompatible(row.rendererKey,row.schemaKey,row.schemaVersion)
+        !rendererIsCompatible(
+          row.rendererKey,
+          "restaurant",
+          row.schemaKey,
+          row.schemaVersion,
+        )
       ) {
         throw new OnboardingOperationError("incomplete");
       }
@@ -2414,7 +2425,12 @@ export async function publishOnboarding(
           row.approvalTemplateId !== row.templateVersionId ||
           row.schemaKey !== "restaurant.v2" ||
           row.schemaVersion !== 2 ||
-          !rendererIsCompatible(row.rendererKey,row.schemaKey,row.schemaVersion)
+          !rendererIsCompatible(
+            row.rendererKey,
+            "restaurant",
+            row.schemaKey,
+            row.schemaVersion,
+          )
         ) {
           throw new OnboardingOperationError("incomplete");
         }
