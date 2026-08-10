@@ -1008,7 +1008,6 @@ export async function saveContentDraft(
         id: string;
         revision: number;
         lastIdempotencyKey: string;
-        rendererKey: string;
         schemaKey: string;
         schemaVersion: number;
         industryKey: IndustryKey;
@@ -1016,15 +1015,11 @@ export async function saveContentDraft(
       }>(
         `SELECT draft.id,draft.revision,
            draft.last_idempotency_key AS "lastIdempotencyKey",
-           version.renderer_key AS "rendererKey",site.industry_key AS "industryKey",
+           site.industry_key AS "industryKey",
            draft.schema_key AS "schemaKey",draft.schema_version AS "schemaVersion",
            draft.content
          FROM public.site_content_drafts draft
          JOIN public.sites site ON site.id=draft.site_id
-         JOIN public.site_template_assignments assignment
-           ON assignment.site_id=site.id AND assignment.status='active'
-         JOIN public.template_versions version
-           ON version.id=assignment.template_version_id
          WHERE draft.site_id=$1
            AND draft.tenant_id=app_context.current_tenant_id()
            AND site.status IN ('preparing','active')
@@ -1033,14 +1028,6 @@ export async function saveContentDraft(
       );
       const row = current.rows[0];
       if (!row) throw new OperationValidationError("not_found");
-      if (!rendererIsCompatible(
-        row.rendererKey,
-        row.industryKey,
-        row.schemaKey,
-        row.schemaVersion,
-      )) {
-        throw new OperationValidationError("invalid");
-      }
       const content = parseContentForSchema(
         row.industryKey,
         row.schemaKey,
