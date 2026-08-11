@@ -126,6 +126,14 @@ Los elementos repetibles utilizarán identificadores estables y orden explícito
 cuando sean necesarios para edición, referencias y restauración. No se agregan
 reservas, socios, asistencia, pagos ni otros datos operacionales a `gym.v1`.
 
+> **Aclaración de trazabilidad (revisión del PR #7):** la “cobertura semanal
+> consistente” de la tabla anterior es un requisito del contenido listo para
+> una futura publicación pública, no de todo borrador `gym.v1`. El contrato
+> editable admite horarios parciales. Antes de habilitar publicación Gym, una
+> validación server-side deberá exigir los siete días explícitos, sin
+> duplicados: cada día abierto con apertura y cierre válidos, o declarado
+> explícitamente como cerrado.
+
 ### 3.2 Clases y horarios
 
 En Gimnasio B1, clases y programación son contenido público estructurado. El

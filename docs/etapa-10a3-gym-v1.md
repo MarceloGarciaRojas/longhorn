@@ -72,6 +72,24 @@ El validador `gym.v1` aplica:
 Las llamadas a la acción son exclusivamente solicitudes informativas. No se
 implementan reservas, cupos transaccionales, pagos ni captura de leads.
 
+### 4.1 Validez del borrador vs readiness de publicación
+
+Durante la revisión del Pull Request #7 se aclaró una ambigüedad entre la
+validez del contrato editable y la preparación para publicación. `gym.v1`
+permite deliberadamente horarios parciales: el schema representa contenido que
+puede construirse y guardarse de forma progresiva, incluso cuando todavía no
+están definidos todos los días de la semana.
+
+Una futura publicación pública Gym tendrá una regla adicional de publication
+readiness. Antes de publicarse deberán existir exactamente los siete días de la
+semana, sin duplicados ni ausencias, y cada día deberá declararse abierto con
+horas válidas de apertura y cierre o explícitamente cerrado. Esta comprobación
+será server-side y no confiará en datos derivados por el frontend.
+
+Gym continúa actualmente sin publicación habilitada; esta aclaración no añade
+publisher, renderer, plantilla, preview, restauración ni código prematuro de
+readiness.
+
 ## 5. Multimedia
 
 El extractor Gym recorre solamente estos roles aprobados:
@@ -128,7 +146,10 @@ clase sin entrenador y plan no destacado.
 Las pruebas cubren validación positiva y negativa, enums, límites, XSS,
 asociaciones rotas, accesibilidad, extracción multimedia, determinismo,
 no-mutación, idempotencia, cruce de tenants, cruce de industrias, RLS,
-persistencia real, migración reversible y publicación fail-closed.
+persistencia real, migración reversible y publicación fail-closed. En horarios,
+protegen de forma explícita que una cobertura parcial es válida y que los días
+presentes no pueden duplicarse, usar valores desconocidos ni declarar un día
+abierto con horas inválidas.
 
 ## 9. Estado funcional por rubro
 

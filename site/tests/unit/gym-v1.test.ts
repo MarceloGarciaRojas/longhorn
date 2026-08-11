@@ -41,6 +41,23 @@ test("gym.v1 validates complete, minimum and no-media fixtures", () => {
   ), []);
 });
 
+test("gym.v1 accepts partial hours and rejects inconsistent present days", () => {
+  const partial = validateGymV1Content(minimumGymV1Fixture(), "publication");
+  assert.deepEqual(partial.hours.map((entry) => entry.day), ["monday"]);
+
+  const duplicate = completeGymV1Fixture();
+  duplicate.hours[1] = { ...duplicate.hours[0] };
+  expectField(() => validateGymV1Content(duplicate, "publication"), "hours.day");
+
+  const invalidTime = completeGymV1Fixture();
+  invalidTime.hours[0].opening_time = "25:00";
+  expectField(() => validateGymV1Content(invalidTime, "publication"), "hours.0");
+
+  const unknownDay = completeGymV1Fixture() as unknown as Record<string, unknown>;
+  ((unknownDay.hours as Record<string, unknown>[])[0]).day = "holiday";
+  expectField(() => validateGymV1Content(unknownDay, "publication"), "hours.0.day");
+});
+
 test("gym.v1 accepts exactly the three approved appearance variants", () => {
   for (const variant of ["volt", "studio", "forge"] as const) {
     assert.equal(
