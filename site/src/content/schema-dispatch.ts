@@ -8,6 +8,13 @@ import {
   validateRestaurantV2Content,
 } from "./restaurant-v2-schema";
 import {
+  GymContentValidationError,
+  parseGymV1Content,
+  validateGymV1Content,
+} from "./gym-v1-schema";
+import {
+  GYM_SCHEMA_KEY,
+  GYM_SCHEMA_VERSION,
   RESTAURANT_SCHEMA_KEY,
   RESTAURANT_SCHEMA_VERSION,
   RESTAURANT_V2_SCHEMA_KEY,
@@ -16,6 +23,7 @@ import {
   type RegisteredContentSchemaKey,
 } from "./types";
 import {
+  GYM_INDUSTRY_KEY,
   isIndustryKey,
   RESTAURANT_INDUSTRY_KEY,
   type IndustryKey,
@@ -59,6 +67,11 @@ const CONTENT_SCHEMAS = Object.freeze([
     schemaKey: RESTAURANT_V2_SCHEMA_KEY,
     schemaVersion: RESTAURANT_V2_SCHEMA_VERSION,
   }),
+  Object.freeze({
+    industryKey: GYM_INDUSTRY_KEY,
+    schemaKey: GYM_SCHEMA_KEY,
+    schemaVersion: GYM_SCHEMA_VERSION,
+  }),
 ] satisfies readonly ContentSchemaDefinition[]);
 
 export function registeredContentSchemas(): readonly ContentSchemaDefinition[] {
@@ -98,7 +111,10 @@ function normalizeValidationError<T>(operation: () => T): T {
   try {
     return operation();
   } catch (error) {
-    if (error instanceof RestaurantContentValidationError) {
+    if (
+      error instanceof RestaurantContentValidationError ||
+      error instanceof GymContentValidationError
+    ) {
       throw new ContentSchemaValidationError(error.field, { cause: error });
     }
     throw error;
@@ -121,6 +137,10 @@ export function validateContentForSchema(
     schemaKey === RESTAURANT_V2_SCHEMA_KEY &&
     schemaVersion === RESTAURANT_V2_SCHEMA_VERSION
   ) return normalizeValidationError(() => validateRestaurantV2Content(content, mode));
+  if (
+    schemaKey === GYM_SCHEMA_KEY &&
+    schemaVersion === GYM_SCHEMA_VERSION
+  ) return normalizeValidationError(() => validateGymV1Content(content, mode));
   throw new ContentSchemaUnavailableError(industryKey, schemaKey, schemaVersion);
 }
 
@@ -140,5 +160,9 @@ export function parseContentForSchema(
     schemaKey === RESTAURANT_V2_SCHEMA_KEY &&
     schemaVersion === RESTAURANT_V2_SCHEMA_VERSION
   ) return normalizeValidationError(() => parseRestaurantV2Content(serialized, mode));
+  if (
+    schemaKey === GYM_SCHEMA_KEY &&
+    schemaVersion === GYM_SCHEMA_VERSION
+  ) return normalizeValidationError(() => parseGymV1Content(serialized, mode));
   throw new ContentSchemaUnavailableError(industryKey, schemaKey, schemaVersion);
 }

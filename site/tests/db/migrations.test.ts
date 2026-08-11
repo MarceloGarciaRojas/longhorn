@@ -43,6 +43,7 @@ test("versioned migrations create only the approved domain schema", async (t) =>
     "0011",
     "0012",
     "0013",
+    "0014",
   ]);
 
   const secondRun = await applyMigrations(migrationUrl);
@@ -71,8 +72,8 @@ test("versioned migrations create only the approved domain schema", async (t) =>
        AND version.status='active'
      ORDER BY template.key,version.version`,
   );
-  assert.equal(await rollbackLatestMigration(migrationUrl), "0013");
-  assert.deepEqual(await applyMigrations(migrationUrl), ["0013"]);
+  assert.equal(await rollbackLatestMigration(migrationUrl), "0014");
+  assert.deepEqual(await applyMigrations(migrationUrl), ["0014"]);
   const restaurantStateAfterSecondUp = await pool.query<{
     templateKey: string;
     rendererKey: string;
@@ -108,6 +109,7 @@ test("versioned migrations create only the approved domain schema", async (t) =>
       ["0011", true],
       ["0012", true],
       ["0013", true],
+      ["0014", true],
     ],
   );
 
@@ -369,7 +371,7 @@ test("versioned migrations create only the approved domain schema", async (t) =>
     );
     assert.match(byName.get("sites_industry_valid") ?? "", /restaurant.*gym/);
     assert.match(byName.get("templates_industry_valid") ?? "", /restaurant.*gym/);
-    assert.doesNotMatch(byName.get("site_content_draft_schema_valid") ?? "", /gym/);
+    assert.match(byName.get("site_content_draft_schema_valid") ?? "", /gym\.v1/);
     assert.doesNotMatch(byName.get("site_content_publication_schema_valid") ?? "", /gym/);
 
     const restaurantCatalog = await client.query<{ count: number }>(
@@ -415,6 +417,59 @@ test("versioned migrations create only the approved domain schema", async (t) =>
        WHERE id='76666666-6666-4666-8666-666666666666'`,
     );
     assert.equal(gymSite.rows[0].industryKey, "gym");
+
+    await client.query(
+      `INSERT INTO public.site_content_drafts(
+         id,tenant_id,site_id,schema_key,schema_version,content,
+         created_by_user_id,updated_by_user_id,last_idempotency_key
+       ) VALUES(
+         '76666666-6666-4666-8666-766666666661',$1,
+         '76666666-6666-4666-8666-666666666666','gym.v1',1,'{}'::jsonb,
+         $2,$2,'76666666-6666-4666-8666-766666666662'
+       )`,
+      [SYNTHETIC_DATA.tenantA.id, SYNTHETIC_DATA.userA.id],
+    );
+
+    await client.query("SAVEPOINT gym_draft_wrong_schema");
+    await expectPgCode(
+      () => client.query(
+        `UPDATE public.site_content_drafts
+         SET schema_key='restaurant.v1',schema_version=1
+         WHERE id='76666666-6666-4666-8666-766666666661'`,
+      ),
+      "23514",
+    );
+    await client.query("ROLLBACK TO SAVEPOINT gym_draft_wrong_schema");
+
+    await client.query("SAVEPOINT gym_site_industry_change");
+    await expectPgCode(
+      () => client.query(
+        `UPDATE public.sites SET industry_key='restaurant'
+         WHERE id='76666666-6666-4666-8666-666666666666'`,
+      ),
+      "23514",
+    );
+    await client.query("ROLLBACK TO SAVEPOINT gym_site_industry_change");
+
+    await client.query("SAVEPOINT gym_publication_blocked");
+    await expectPgCode(
+      () => client.query(
+        `INSERT INTO public.site_content_publications(
+           tenant_id,site_id,template_version_id,schema_key,schema_version,
+           content_snapshot,publication_number,published_by_user_id,idempotency_key
+         ) VALUES(
+           $1,'76666666-6666-4666-8666-666666666666',$2,'gym.v1',1,
+           '{}'::jsonb,1,$3,'76666666-6666-4666-8666-766666666663'
+         )`,
+        [
+          SYNTHETIC_DATA.tenantA.id,
+          SYNTHETIC_DATA.templateRestaurantV2.id,
+          SYNTHETIC_DATA.userA.id,
+        ],
+      ),
+      "23514",
+    );
+    await client.query("ROLLBACK TO SAVEPOINT gym_publication_blocked");
 
     await client.query("SAVEPOINT unknown_site_industry");
     await expectPgCode(

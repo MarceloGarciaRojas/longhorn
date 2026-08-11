@@ -54,19 +54,24 @@ test("industry registry is closed to restaurant and gym", () => {
   }
 });
 
-test("only Restaurant content schemas are registered", () => {
+test("content schema registry is closed to Restaurant v1/v2 and Gym v1", () => {
   assert.deepEqual(
     registeredContentSchemas().map(({ industryKey, schemaKey, schemaVersion }) =>
       `${industryKey}:${schemaKey}:${schemaVersion}`
     ),
-    ["restaurant:restaurant.v1:1", "restaurant:restaurant.v2:2"],
+    [
+      "restaurant:restaurant.v1:1",
+      "restaurant:restaurant.v2:2",
+      "gym:gym.v1:1",
+    ],
   );
   assert.equal(contentSchemaIsCompatible("restaurant", "restaurant.v1", 1), true);
   assert.equal(contentSchemaIsCompatible("restaurant", "restaurant.v2", 2), true);
-  assert.equal(contentSchemaIsCompatible("gym", "gym.v1", 1), false);
+  assert.equal(contentSchemaIsCompatible("gym", "gym.v1", 1), true);
   assert.equal(contentSchemaIsCompatible("gym", "restaurant.v2", 2), false);
+  assert.equal(requireCompatibleContentSchema("gym", "gym.v1", 1).schemaKey, "gym.v1");
   assert.throws(
-    () => requireCompatibleContentSchema("gym", "gym.v1", 1),
+    () => requireCompatibleContentSchema("gym", "gym.v2", 2),
     ContentSchemaUnavailableError,
   );
 });

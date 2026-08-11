@@ -470,7 +470,7 @@ test("another tenant cannot list, preview or select templates for the site", asy
   );
 });
 
-test("a Gym site has no selectable templates before gym.v1 exists", async () => {
+test("a Gym site has no selectable templates without a Gym renderer", async () => {
   const pool = createDatabasePool({
     connectionString: readDatabaseUrl("migration"),
     applicationName: "nexi-gym-empty-catalog",

@@ -1,13 +1,20 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
-import type { RegisteredContent, RestaurantContentV2 } from "./types";
+import type {
+  GymContentV1,
+  RegisteredContent,
+  RestaurantContentV2,
+} from "./types";
 import {
+  GYM_SCHEMA_KEY,
+  GYM_SCHEMA_VERSION,
   RESTAURANT_SCHEMA_KEY,
   RESTAURANT_SCHEMA_VERSION,
   RESTAURANT_V2_SCHEMA_KEY,
   RESTAURANT_V2_SCHEMA_VERSION,
 } from "./types";
+import { gymV1MediaReferences } from "./gym-v1-schema";
 import { requireCompatibleContentSchema } from "./schema-dispatch";
 
 export interface ContentMediaReferenceInput {
@@ -29,32 +36,35 @@ export function contentMediaReferences(
     schemaVersion === RESTAURANT_SCHEMA_VERSION
   ) return [];
   if (
-    schemaKey !== RESTAURANT_V2_SCHEMA_KEY ||
-    schemaVersion !== RESTAURANT_V2_SCHEMA_VERSION
+    schemaKey === RESTAURANT_V2_SCHEMA_KEY &&
+    schemaVersion === RESTAURANT_V2_SCHEMA_VERSION
   ) {
-    throw new Error("media_extractor_unavailable");
-  }
-  const v2 = content as RestaurantContentV2;
-  const result: ContentMediaReferenceInput[] = [];
-  if (v2.hero.media) {
-    result.push({
-      fieldPath: "hero.media",
-      assetId: v2.hero.media.assetId,
-      altText: v2.hero.media.altText,
-      decorative: v2.hero.media.decorative,
-    });
-  }
-  v2.menu.items.forEach((item, index) => {
-    if (item.media) {
+    const v2 = content as RestaurantContentV2;
+    const result: ContentMediaReferenceInput[] = [];
+    if (v2.hero.media) {
       result.push({
-        fieldPath: `menu.items.${index}.media`,
-        assetId: item.media.assetId,
-        altText: item.media.altText,
-        decorative: item.media.decorative,
+        fieldPath: "hero.media",
+        assetId: v2.hero.media.assetId,
+        altText: v2.hero.media.altText,
+        decorative: v2.hero.media.decorative,
       });
     }
-  });
-  return result;
+    v2.menu.items.forEach((item, index) => {
+      if (item.media) {
+        result.push({
+          fieldPath: `menu.items.${index}.media`,
+          assetId: item.media.assetId,
+          altText: item.media.altText,
+          decorative: item.media.decorative,
+        });
+      }
+    });
+    return result;
+  }
+  if (schemaKey === GYM_SCHEMA_KEY && schemaVersion === GYM_SCHEMA_VERSION) {
+    return gymV1MediaReferences(content as GymContentV1);
+  }
+  throw new Error("media_extractor_unavailable");
 }
 
 export async function replaceDraftMediaReferences(
