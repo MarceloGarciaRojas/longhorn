@@ -4,7 +4,7 @@
 - **Marca visible:** nexi
 - **Etapa:** 10A.3
 - **Fecha:** 2026-08-09
-- **Estado:** IMPLEMENTADA Y VALIDADA LOCALMENTE; CI PENDIENTE
+- **Estado:** AUDITADA; LISTA PARA REVISIÓN HUMANA
 - **Base:** `8edf1ccb6898817bd0150b07ce80a73d4c2442da`
 - **Rama:** `codex/etapa-10a3-gym-v1`
 
@@ -187,10 +187,35 @@ Restaurant. El catálogo conserva exactamente tres plantillas Restaurant.
 - ZIP Pulso Club: SHA-256
   `70833E4A72C592DFB5253659B74D32E77415895CE5EED0D9DF5274EE3E3FC072`.
 
-La CI alojada y el estado del Pull Request se registran en el informe de cierre
-posterior al push, sin ampliar el alcance funcional de este documento.
+La CI alojada del incremento funcional aprobó en el SHA
+`f4a69b919da3e4069fbd35ad67d2adf51b5038c0`: run `31351895214`, job
+`93344171346`, resultado `SUCCESS`, duración 3 min 26 s y cero deployments.
 
-## 13. Siguiente etapa
+## 13. Auditoría final 10A.3-M
+
+La puerta 10A.3-M repitió de forma independiente la auditoría el 2026-08-10
+sobre la base `8edf1ccb6898817bd0150b07ce80a73d4c2442da` y el incremento funcional
+`f4a69b919da3e4069fbd35ad67d2adf51b5038c0`.
+
+- instalación congelada con Node `24.14.0` y pnpm `11.9.0`: aprobada;
+- migración 0014 `UP → DOWN → UP` y RLS: 8/8 pruebas aprobadas;
+- `pnpm verify`: 65/65 ejecuciones aprobadas;
+- suites DB, auth, admin, client, operations, content, media, templates y
+  onboarding: 120/120 ejecuciones aprobadas;
+- E2E con los resets oficiales: 10/10 ejecuciones aprobadas;
+- total independiente: 195/195 ejecuciones aprobadas;
+- matriz adicional de checksum ante cambios de clase, entrenador, plan,
+  horario, apariencia y medio: 7/7 comprobaciones aprobadas;
+- lint: 0 errores y las mismas 6 advertencias heredadas;
+- audit: critical 0, high 0, moderate 0, low 0;
+- lockfile, patches, migraciones históricas y ZIP Pulso Club: intactos;
+- renderer Gym: 0; plantillas Gym: 0; preview, editor, onboarding y publicación
+  Gym: no habilitados.
+
+La auditoría no modificó código funcional, migraciones, pruebas, dependencias,
+HTML, CSS ni recursos visuales.
+
+## 14. Siguiente etapa
 
 Tras la revisión humana de `gym.v1`, la siguiente etapa puede preparar el
 renderer Pulso Club contra este contrato. Debe conservar el registro cerrado,
