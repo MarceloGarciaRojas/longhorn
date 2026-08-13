@@ -134,7 +134,6 @@ function PulsoImage({
   sizes,
   ImageComponent,
   priority = false,
-  decorative = false,
 }: {
   usage: GymMediaUsage;
   media: MediaRenderManifest;
@@ -143,7 +142,6 @@ function PulsoImage({
   sizes: string;
   ImageComponent: PulsoImageComponent;
   priority?: boolean;
-  decorative?: boolean;
 }): ReactNode {
   const resolved = resolvedMedia(usage, media, variant);
   if (!resolved) return null;
@@ -153,7 +151,7 @@ function PulsoImage({
       width={resolved.width}
       height={resolved.height}
       sizes={sizes}
-      alt={decorative || usage.decorative ? "" : usage.altText}
+      alt={usage.decorative ? "" : usage.altText}
       className={className}
       priority={priority}
     />
@@ -262,15 +260,19 @@ export function GymPulsoView({
   const visiblePlans = content.plans.filter((entry) => entry.visible);
   const visibleFacilities = content.facilities.filter((entry) => entry.visible);
   const visibleGallery = content.gallery.filter((entry) => entry.visible);
-  const visibleSchedule = content.schedule.filter((entry) => entry.visible);
   const classById = new Map(visibleClasses.map((entry) => [entry.id, entry]));
+  const visibleSchedule = content.schedule.filter(
+    (entry) => entry.visible && classById.has(entry.class_id),
+  );
   const trainerById = new Map(visibleTrainers.map((entry) => [entry.id, entry]));
   const heroMedia = resolvedMedia(content.hero.media, media, "hero");
   const attributes = methodAttributes(content);
   const primaryHref = requestHref(content);
   const primaryExternal = externalHref(primaryHref);
   const firstOpenHours = content.hours.find((entry) => entry.is_open);
-  const socials = content.contact.social.filter((entry) => entry.visible);
+  const visibleSocialLinks = content.contact.social.filter(
+    (entry) => entry.visible && Boolean(entry.url),
+  );
   const visibleCategoryIds = new Set(
     visibleClasses.map((entry) => entry.category_id),
   );
@@ -345,7 +347,7 @@ export function GymPulsoView({
         </a>
         <nav className={className("nav")} aria-label="Navegación principal">
           <a href="#metodo">Método</a>
-          <a href="#clases">Clases</a>
+          {visibleClasses.length ? <a href="#clases">Clases</a> : null}
           {visiblePlans.length ? <a href="#planes">Planes</a> : null}
           <a className={className("navCta")} href={primaryHref} {...(primaryExternal ? { target: "_blank", rel: "noreferrer" } : {})}>
             {content.hero.primary_cta_label}
@@ -355,7 +357,7 @@ export function GymPulsoView({
           <summary>Menú</summary>
           <nav aria-label="Navegación móvil">
             <a href="#metodo">Método</a>
-            <a href="#clases">Clases</a>
+            {visibleClasses.length ? <a href="#clases">Clases</a> : null}
             {visiblePlans.length ? <a href="#planes">Planes</a> : null}
             <a
               href={primaryHref}
@@ -465,9 +467,8 @@ export function GymPulsoView({
           </div>
           <div className={className("scheduleList")}>
             {visibleSchedule.map((entry) => {
-              const classEntry = classById.get(entry.class_id);
+              const classEntry = classById.get(entry.class_id)!;
               const trainer = entry.trainer_id ? trainerById.get(entry.trainer_id) : null;
-              if (!classEntry) return null;
               return (
                 <article key={entry.id}>
                   <div><span>{DAY_LABELS[entry.day]}</span><strong>{entry.start_time}</strong></div>
@@ -508,7 +509,7 @@ export function GymPulsoView({
             ))}
             {visibleGallery.map((item) => (
               <figure key={item.id}>
-                <PulsoImage usage={item.media} media={media} variant="card" className={className("galleryImage")} sizes="(max-width: 699px) 100vw, 33vw" ImageComponent={ImageComponent} decorative />
+                <PulsoImage usage={item.media} media={media} variant="card" className={className("galleryImage")} sizes="(max-width: 699px) 100vw, 33vw" ImageComponent={ImageComponent} />
               </figure>
             ))}
           </div>
@@ -559,9 +560,9 @@ export function GymPulsoView({
         ) : null}
       </section>
 
-      {socials.length ? (
+      {visibleSocialLinks.length ? (
         <aside className={className("social")} aria-label="Redes sociales">
-          {socials.map((entry) => <a href={entry.url} target="_blank" rel="noreferrer" key={entry.id}>{SOCIAL_LABELS[entry.network]}</a>)}
+          {visibleSocialLinks.map((entry) => <a href={entry.url} target="_blank" rel="noreferrer" key={entry.id}>{SOCIAL_LABELS[entry.network]}</a>)}
         </aside>
       ) : null}
 

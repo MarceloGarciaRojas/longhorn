@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { visiblePulsoClassIndexes } from "./gym-pulso-class-filter";
 import styles from "./gym-pulso.module.css";
 
@@ -21,7 +21,6 @@ export function GymPulsoClassBrowser({
   items,
 }: PulsoClassBrowserProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
-  const resultsId = useId();
   const visibleIndexes = visiblePulsoClassIndexes(
     itemCategoryIds,
     selectedCategoryId,
@@ -32,16 +31,14 @@ export function GymPulsoClassBrowser({
     <div>
       <div
         className={styles.filterTabs}
-        role="tablist"
+        role="group"
         aria-label="Filtrar clases por categoría"
       >
         {filters.map((filter) => (
           <button
             key={filter.id}
             type="button"
-            role="tab"
-            aria-selected={selectedCategoryId === filter.id}
-            aria-controls={resultsId}
+            aria-pressed={selectedCategoryId === filter.id}
             onClick={() => setSelectedCategoryId(filter.id)}
           >
             {filter.name}
@@ -51,12 +48,7 @@ export function GymPulsoClassBrowser({
       <p className={styles.filterStatus} aria-live="polite">
         {visibleIndexes.length} {visibleIndexes.length === 1 ? "clase" : "clases"}
       </p>
-      <div
-        id={resultsId}
-        className={styles.classGrid}
-        role="tabpanel"
-        tabIndex={0}
-      >
+      <div className={styles.classGrid}>
         {visibleIndexes.map((index) => items[index])}
       </div>
     </div>

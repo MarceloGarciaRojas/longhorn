@@ -458,10 +458,131 @@ test("Pulso Club class filters are closed, content-derived and ephemeral", () =>
     ),
     "utf8",
   );
-  assert.match(source, /role="tablist"/);
-  assert.match(source, /aria-selected/);
+  assert.match(source, /<button/);
+  assert.match(source, /role="group"/);
+  assert.match(source, /aria-pressed/);
   assert.match(source, /aria-live="polite"/);
+  assert.doesNotMatch(source, /role="tab(?:list|panel)?"|aria-selected/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|fetch\(|query\(|tenant_id/);
+});
+
+test("Pulso Club preserves informative gallery alt text and honors decorative media", () => {
+  const content = completeGymV1Fixture();
+  content.gallery.push(
+    {
+      id: "92000000-0000-4000-8000-000000000010",
+      visible: true,
+      order: 1,
+      media: {
+        assetId: GYM_FIXTURE_IDS.gallery,
+        altText: "Área de movilidad junto a la zona de fuerza",
+        decorative: false,
+      },
+    },
+    {
+      id: "92000000-0000-4000-8000-000000000011",
+      visible: true,
+      order: 2,
+      media: {
+        assetId: GYM_FIXTURE_IDS.gallery,
+        altText: "",
+        decorative: true,
+      },
+    },
+  );
+
+  const rendered = renderGymPulso({ content });
+  const galleryAlts = rendered.images
+    .filter((image) => image.src.includes(`/${GYM_FIXTURE_IDS.gallery}/`))
+    .map((image) => image.alt);
+  assert.deepEqual(galleryAlts, [
+    "Vista interior del gimnasio ficticio",
+    "Área de movilidad junto a la zona de fuerza",
+    "",
+  ]);
+
+  const invalid = completeGymV1Fixture();
+  invalid.gallery[0].media.altText = "";
+  assert.throws(
+    () => renderGymPulso({ content: invalid }),
+    GymContentValidationError,
+  );
+});
+
+test("Pulso Club navigation and schedule share visible class derivation", () => {
+  const visibleContent = completeGymV1Fixture();
+  const visible = renderGymPulso({ content: visibleContent });
+  assert.ok(visible.links.includes("#clases"));
+  assert.match(visible.text.join(" "), /Organiza tu semana/);
+
+  const mixedContent = completeGymV1Fixture();
+  mixedContent.classes.push({
+    ...structuredClone(mixedContent.classes[0]),
+    id: "92000000-0000-4000-8000-000000000012",
+    name: "Clase interna no publicada",
+    visible: false,
+    order: 1,
+  });
+  mixedContent.schedule.push({
+    ...structuredClone(mixedContent.schedule[0]),
+    id: "92000000-0000-4000-8000-000000000013",
+    class_id: "92000000-0000-4000-8000-000000000012",
+    trainer_id: null,
+    order: 1,
+  });
+  const mixed = renderGymPulso({ content: mixedContent });
+  assert.match(mixed.text.join(" "), /Organiza tu semana/);
+  assert.doesNotMatch(mixed.text.join(" "), /Clase interna no publicada/);
+
+  const hiddenContent = completeGymV1Fixture();
+  hiddenContent.classes.forEach((entry) => {
+    entry.visible = false;
+  });
+  const hidden = renderGymPulso({ content: hiddenContent });
+  assert.equal(hidden.links.includes("#clases"), false);
+  assert.doesNotMatch(hidden.text.join(" "), /Clases para avanzar|Organiza tu semana/);
+});
+
+test("Pulso Club renders only visible social links with validated URLs", () => {
+  const content = completeGymV1Fixture();
+  content.contact.social = [
+    {
+      id: GYM_FIXTURE_IDS.social,
+      network: "instagram",
+      url: "https://instagram.com/nexofuerzaficticio",
+      visible: true,
+      order: 0,
+    },
+    {
+      id: "92000000-0000-4000-8000-000000000014",
+      network: "facebook",
+      url: "https://facebook.com/nexofuerzaficticio",
+      visible: false,
+      order: 1,
+    },
+    {
+      id: "92000000-0000-4000-8000-000000000015",
+      network: "tiktok",
+      url: "",
+      visible: true,
+      order: 2,
+    },
+  ];
+
+  const rendered = renderGymPulso({ content });
+  assert.ok(rendered.links.includes("https://instagram.com/nexofuerzaficticio"));
+  assert.equal(
+    rendered.links.includes("https://facebook.com/nexofuerzaficticio"),
+    false,
+  );
+  assert.equal(rendered.links.includes(""), false);
+
+  const unsafe = completeGymV1Fixture();
+  unsafe.contact.social[0].url = "javascript:alert(1)";
+  assert.throws(
+    () => renderGymPulso({ content: unsafe }),
+    GymContentValidationError,
+  );
 });
 
 test("Pulso Club handles minimum content, missing media and partial hours", () => {

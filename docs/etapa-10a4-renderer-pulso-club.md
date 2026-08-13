@@ -2,9 +2,12 @@
 
 ## Estado
 
-Implementada localmente para revisión técnica. Este incremento no habilita la
-plantilla Gimnasio en catálogo, preview, selección, publicación, restauración,
-editor ni onboarding.
+**Implementación técnica parcial: SÍ. Activación funcional: NO.**
+
+El soporte de industria `gym`, el contrato y los borradores `gym.v1`, y el
+renderer aislado `gym-pulso-v1` están implementados. Este incremento no registra
+una plantilla Gimnasio ni habilita manifest, registry, catálogo, preview,
+selección, publicación, restauración, editor, onboarding, staging o producción.
 
 ## Objetivo
 
@@ -111,14 +114,14 @@ La validación local se ejecutó con Node `24.14.0` y pnpm `11.9.0`:
 | Validación | Resultado |
 | --- | --- |
 | `pnpm install --frozen-lockfile` | Aprobada; lockfile sin cambios |
-| `pnpm verify` | Aprobada; 75 pruebas, TypeScript, lint, build y secretos |
-| Pruebas unitarias Gym/renderer | 19/19 aprobadas |
+| `pnpm verify` | Aprobada; 78 pruebas, TypeScript, lint, build y secretos |
+| Pruebas unitarias Gym/renderer | 22/22 aprobadas |
 | `pnpm test:db` | 8/8 aprobadas |
 | `pnpm test:auth` | 19/19 aprobadas |
 | `pnpm test:admin` | 14/14 aprobadas |
 | `pnpm test:client` | 12/12 aprobadas |
 | `pnpm test:operations` | 8/8 aprobadas |
-| `pnpm test:content` | 35/35 aprobadas |
+| `pnpm test:content` | 38/38 aprobadas |
 | `pnpm test:media-seed` | 5/5 aprobadas |
 | `pnpm test:media` | 11/11 aprobadas |
 | `pnpm test:templates` | 13/13 aprobadas después de `test:prepare-media` |
