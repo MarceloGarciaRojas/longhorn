@@ -22,6 +22,8 @@ import {
   compatibleTemplateCatalog,
   rendererOnboardingIsAllowed,
   rendererPublicationIsAllowed,
+  templatePreviewIsAllowed,
+  templateSelectionIsAllowed,
 } from "../../src/content/template-capabilities";
 import type { TemplateOption } from "../../src/content/types";
 
@@ -44,6 +46,22 @@ const restaurantCatalog: TemplateOption[] = [
   status: "active",
   previewKey: templateKey,
 }));
+
+const gymCatalog: TemplateOption[] = [{
+  id: "30000000-0000-4000-8000-000000000001",
+  templateId: "40000000-0000-4000-8000-000000000001",
+  templateKey: "gym-pulso",
+  displayName: "Pulso Club",
+  description: "Catalogo Gym de prueba",
+  industryKey: GYM_INDUSTRY_KEY,
+  version: 1,
+  rendererKey: "gym-pulso-v1",
+  schemaKey: "gym.v1",
+  minimumSchemaVersion: 1,
+  maximumSchemaVersion: 1,
+  status: "active",
+  previewKey: "gym-pulso",
+}];
 
 test("industry registry is closed to restaurant and gym", () => {
   assert.deepEqual(INDUSTRY_KEYS, ["restaurant", "gym"]);
@@ -76,8 +94,8 @@ test("content schema registry is closed to Restaurant v1/v2 and Gym v1", () => {
   );
 });
 
-test("renderer registry remains Restaurant-only", () => {
-  assert.equal(registeredRendererKeys().length, 4);
+test("renderer registry adds only the closed Pulso Club Gym renderer", () => {
+  assert.equal(registeredRendererKeys().length, 5);
   for (const rendererKey of [
     "restaurant-classic-v2",
     "restaurant-modern-v1",
@@ -96,15 +114,27 @@ test("renderer registry remains Restaurant-only", () => {
   assert.equal(rendererIsCompatible("restaurant-modern-v1", "restaurant", "unknown.v1", 1), false);
   assert.equal(rendererPublicationIsAllowed("restaurant-modern-v1", "gym"), false);
   assert.equal(rendererOnboardingIsAllowed("restaurant-modern-v1", "gym"), false);
+  assert.equal(rendererIsCompatible("gym-pulso-v1", "gym", "gym.v1", 1), true);
+  assert.equal(rendererIsCompatible("gym-pulso-v1", "restaurant", "gym.v1", 1), false);
+  assert.equal(rendererIsCompatible("gym-pulso-v1", "gym", "restaurant.v2", 2), false);
+  assert.equal(templatePreviewIsAllowed(gymCatalog[0]), true);
+  assert.equal(templateSelectionIsAllowed(gymCatalog[0]), false);
+  assert.equal(rendererPublicationIsAllowed("gym-pulso-v1", "gym"), false);
+  assert.equal(rendererOnboardingIsAllowed("gym-pulso-v1", "gym"), false);
 });
 
-test("catalog exposes three Restaurant templates and zero Gym templates", () => {
+test("catalog exposes three Restaurant templates and one preview-only Gym template", () => {
   assert.equal(
     compatibleTemplateCatalog("restaurant", "restaurant.v2", 2, restaurantCatalog).length,
     3,
   );
   assert.deepEqual(
-    compatibleTemplateCatalog("gym", "gym.v1", 1, restaurantCatalog),
+    compatibleTemplateCatalog("gym", "gym.v1", 1, [...restaurantCatalog, ...gymCatalog])
+      .map((option) => option.templateKey),
+    ["gym-pulso"],
+  );
+  assert.deepEqual(
+    compatibleTemplateCatalog("restaurant", "restaurant.v2", 2, gymCatalog),
     [],
   );
   assert.throws(

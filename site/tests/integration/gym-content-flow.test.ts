@@ -7,9 +7,12 @@ import { createSessionToken, hashSessionToken } from "../../src/auth/security";
 import type { AuthSession } from "../../src/auth/types";
 import {
   clientCompatibleTemplates,
+  clientChangeTemplate,
   clientContentWorkspace,
+  clientPreviewAlternativeTemplate,
   clientPreviewContent,
   publishContentTransaction,
+  restorePublication,
   saveContentDraft,
 } from "../../src/content/service.server";
 import { readDatabaseUrl } from "../../src/db/config";
@@ -17,7 +20,11 @@ import { createDatabasePool } from "../../src/db/pool";
 import { withClientOperation } from "../../src/operations/contexts.server";
 import { applyMigrations, rollbackAllMigrations } from "../../scripts/db/migrations";
 import { seedSyntheticData, SYNTHETIC_DATA } from "../../scripts/db/seed";
-import { completeGymV1Fixture, minimumGymV1Fixture } from "../fixtures/gym-v1";
+import {
+  GYM_FIXTURE_IDS,
+  completeGymV1Fixture,
+  minimumGymV1Fixture,
+} from "../fixtures/gym-v1";
 
 const GYM_SITE_ID = "94000000-0000-4000-8000-000000000001";
 const GYM_DRAFT_ID = "94000000-0000-4000-8000-000000000002";
@@ -87,7 +94,7 @@ async function insertReadyAsset(
       input.assetId,
       input.tenantId,
       input.siteId,
-      `tenants/${input.tenantId}/assets/hero.webp`,
+      `tenants/${input.tenantId}/assets/${input.assetId}/hero.webp`,
       input.userId,
       randomUUID(),
     ],
@@ -103,7 +110,7 @@ async function insertReadyAsset(
         input.siteId,
         input.assetId,
         variant,
-        `tenants/${input.tenantId}/assets/${variant}.webp`,
+        `tenants/${input.tenantId}/assets/${input.assetId}/${variant}.webp`,
         String(index + 1),
       ],
     );
@@ -119,12 +126,16 @@ async function cleanupGymFixtures(
     [GYM_SITE_ID, OTHER_GYM_SITE_ID, GYM_ASSET_ID, OTHER_TENANT_ASSET_ID],
   );
   await pool.query(
-    `DELETE FROM public.media_variants WHERE asset_id IN ($1,$2)`,
-    [GYM_ASSET_ID, OTHER_TENANT_ASSET_ID],
+    `DELETE FROM public.media_variants
+     WHERE asset_id=$1 OR asset_id IN (
+       SELECT id FROM public.media_assets WHERE site_id IN ($2,$3)
+     )`,
+    [OTHER_TENANT_ASSET_ID, GYM_SITE_ID, OTHER_GYM_SITE_ID],
   );
   await pool.query(
-    `DELETE FROM public.media_assets WHERE id IN ($1,$2)`,
-    [GYM_ASSET_ID, OTHER_TENANT_ASSET_ID],
+    `DELETE FROM public.media_assets
+     WHERE id=$1 OR site_id IN ($2,$3)`,
+    [OTHER_TENANT_ASSET_ID, GYM_SITE_ID, OTHER_GYM_SITE_ID],
   );
   await pool.query(
     `DELETE FROM public.site_content_drafts WHERE site_id IN ($1,$2)`,
@@ -136,7 +147,7 @@ async function cleanupGymFixtures(
   );
 }
 
-test("gym.v1 drafts persist safely while preview, catalog and publication stay closed", async (t) => {
+test("gym.v1 exposes only an isolated private preview while mutations stay closed", async (t) => {
   const migrationUrl = readDatabaseUrl("migration");
   const cleanupPool = createDatabasePool({
     connectionString: migrationUrl,
@@ -248,10 +259,56 @@ test("gym.v1 drafts persist safely while preview, catalog and publication stay c
   assert.equal(workspace?.industryKey, "gym");
   assert.equal(workspace?.draft?.schemaKey, "gym.v1");
   assert.equal(workspace?.assignment, null);
-  assert.deepEqual(await clientCompatibleTemplates(clientB, GYM_SITE_ID), {
-    currentTemplateVersionId: null,
-    options: [],
-  });
+  const gymCatalog = await clientCompatibleTemplates(clientB, GYM_SITE_ID);
+  assert.equal(gymCatalog?.currentTemplateVersionId, null);
+  assert.deepEqual(gymCatalog?.options.map((option) => option.templateKey), ["gym-pulso"]);
+  const pulso = gymCatalog?.options[0];
+  assert.ok(pulso);
+  assert.equal(pulso.rendererKey, "gym-pulso-v1");
+  assert.equal(pulso.schemaKey, "gym.v1");
+  const previewWithoutMedia = await clientPreviewAlternativeTemplate(
+    clientB,
+    GYM_SITE_ID,
+    pulso.id,
+  );
+  assert.deepEqual(previewWithoutMedia?.draft.content, initial);
+  assert.deepEqual(previewWithoutMedia?.media, {});
+  assert.equal(
+    await clientPreviewAlternativeTemplate(clientA, GYM_SITE_ID, pulso.id),
+    null,
+  );
+  assert.equal(
+    await clientPreviewAlternativeTemplate(
+      clientB,
+      SYNTHETIC_DATA.siteB.id,
+      pulso.id,
+    ),
+    null,
+  );
+  assert.equal(
+    await clientPreviewAlternativeTemplate(
+      clientB,
+      GYM_SITE_ID,
+      SYNTHETIC_DATA.templateRestaurantV2.id,
+    ),
+    null,
+  );
+  assert.equal(
+    await clientPreviewAlternativeTemplate(
+      clientB,
+      GYM_SITE_ID,
+      "99999999-9999-4999-8999-999999999999",
+    ),
+    null,
+  );
+  const selection = new FormData();
+  selection.set("site_id", GYM_SITE_ID);
+  selection.set("template_version_id", pulso.id);
+  selection.set("assignment_version", "0");
+  selection.set("idempotency_key", randomUUID());
+  await assert.rejects(
+    clientChangeTemplate(clientB, selection, "gym-preview-selection-denied"),
+  );
   assert.equal(await clientPreviewContent(clientB, GYM_SITE_ID), null);
 
   const idempotencyKey = randomUUID();
@@ -287,6 +344,18 @@ test("gym.v1 drafts persist safely while preview, catalog and publication stay c
       [GYM_SITE_ID],
     )).rows[0].count,
     0,
+  );
+  const restaurantPublication = await pool.query<{ id: string }>(
+    `SELECT id FROM public.site_content_publications
+     WHERE site_id=$1 ORDER BY publication_number LIMIT 1`,
+    [SYNTHETIC_DATA.siteB.id],
+  );
+  const restore = new FormData();
+  restore.set("site_id", GYM_SITE_ID);
+  restore.set("publication_id", restaurantPublication.rows[0].id);
+  restore.set("idempotency_key", randomUUID());
+  await assert.rejects(
+    restorePublication(clientB, restore, "gym-preview-restore-denied"),
   );
 
   const invalidMedia = minimumGymV1Fixture();
@@ -344,13 +413,65 @@ test("gym.v1 drafts persist safely while preview, catalog and publication stay c
     saveForm(GYM_SITE_ID, 2, withMedia, randomUUID()),
     "gym-v1-media-save",
   );
+  const previewWithMedia = await clientPreviewAlternativeTemplate(
+    clientB,
+    GYM_SITE_ID,
+    pulso.id,
+  );
+  assert.equal(
+    previewWithMedia?.media[GYM_ASSET_ID]?.hero?.url.includes(GYM_ASSET_ID),
+    true,
+  );
+  for (const assetId of [
+    GYM_FIXTURE_IDS.logo,
+    GYM_FIXTURE_IDS.hero,
+    GYM_FIXTURE_IDS.class,
+    GYM_FIXTURE_IDS.trainerMedia,
+    GYM_FIXTURE_IDS.facility,
+    GYM_FIXTURE_IDS.gallery,
+  ]) {
+    await insertReadyAsset(pool, {
+      assetId,
+      tenantId: SYNTHETIC_DATA.tenantB.id,
+      siteId: GYM_SITE_ID,
+      userId: SYNTHETIC_DATA.userB.id,
+    });
+  }
+  await saveContentDraft(
+    clientB,
+    saveForm(GYM_SITE_ID, 3, completeGymV1Fixture(), randomUUID()),
+    "gym-v1-full-media-save",
+  );
+  const previewWithFullMedia = await clientPreviewAlternativeTemplate(
+    clientB,
+    GYM_SITE_ID,
+    pulso.id,
+  );
+  assert.deepEqual(
+    Object.keys(previewWithFullMedia?.media ?? {}).sort(),
+    [
+      GYM_FIXTURE_IDS.logo,
+      GYM_FIXTURE_IDS.hero,
+      GYM_FIXTURE_IDS.class,
+      GYM_FIXTURE_IDS.trainerMedia,
+      GYM_FIXTURE_IDS.facility,
+      GYM_FIXTURE_IDS.gallery,
+    ].sort(),
+  );
   assert.deepEqual(
     (await pool.query<{ fieldPath: string }>(
       `SELECT field_path AS "fieldPath" FROM public.content_media_references
        WHERE draft_id=$1 ORDER BY field_path`,
       [GYM_DRAFT_ID],
     )).rows,
-    [{ fieldPath: "hero.media" }],
+    [
+      { fieldPath: "classes.0.media" },
+      { fieldPath: "facilities.0.media" },
+      { fieldPath: "gallery.0.media" },
+      { fieldPath: "hero.media" },
+      { fieldPath: "identity.logo" },
+      { fieldPath: "trainers.0.media" },
+    ],
   );
   await assert.rejects(
     pool.query(

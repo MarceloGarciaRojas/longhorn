@@ -104,7 +104,7 @@ async function webpCount(storage: LocalObjectStorage): Promise<number> {
 test("media seed is isolated, transactional and idempotent", async (t) => {
   process.env.APP_ENV = "test";
 
-  await t.test("canonical template seed registers exactly three v2 options idempotently", async () => {
+  await t.test("canonical template seed registers Restaurant and preview-only Gym idempotently", async () => {
     await resetCanonical();
     const catalog = async () => withPool(async (pool) => {
       const result = await pool.query<{
@@ -143,6 +143,28 @@ test("media seed is isolated, transactional and idempotent", async (t) => {
       first[2]?.id,
       SYNTHETIC_DATA.templateRestaurantEditorialV1.id,
     );
+    const gym = await withPool(async (pool) => {
+      const result = await pool.query<{
+        id: string;
+        key: string;
+        rendererKey: string;
+        schemaKey: string;
+      }>(
+        `SELECT version.id,template.key,version.renderer_key AS "rendererKey",
+           version.content_schema_key AS "schemaKey"
+         FROM public.template_versions version
+         JOIN public.templates template ON template.id=version.template_id
+         WHERE template.industry_key='gym' AND template.status='active'
+           AND version.status='active'`,
+      );
+      return result.rows;
+    });
+    assert.deepEqual(gym, [{
+      id: SYNTHETIC_DATA.templateGymPulsoV1.id,
+      key: "gym-pulso",
+      rendererKey: "gym-pulso-v1",
+      schemaKey: "gym.v1",
+    }]);
   });
 
   await t.test("archived target fails before any partial change", async () => {

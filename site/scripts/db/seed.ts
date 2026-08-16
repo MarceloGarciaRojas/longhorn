@@ -4,6 +4,8 @@ import {
   validateRestaurantContent,
 } from "../../src/content/restaurant-schema";
 import {
+  GYM_PULSO_RENDERER_KEY,
+  GYM_PULSO_TEMPLATE_KEY,
   RESTAURANT_EDITORIAL_RENDERER_KEY,
   RESTAURANT_EDITORIAL_TEMPLATE_KEY,
   type RestaurantContent,
@@ -176,6 +178,16 @@ export const SYNTHETIC_DATA = {
     id: "a8aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     version: 1,
     rendererKey: RESTAURANT_EDITORIAL_RENDERER_KEY,
+  },
+  templateGymPulso: {
+    id: "a8bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    key: GYM_PULSO_TEMPLATE_KEY,
+    displayName: "Pulso Club",
+  },
+  templateGymPulsoV1: {
+    id: "a8cccccc-cccc-4ccc-8ccc-cccccccccccc",
+    version: 1,
+    rendererKey: GYM_PULSO_RENDERER_KEY,
   },
 } as const;
 

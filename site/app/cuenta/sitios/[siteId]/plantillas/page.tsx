@@ -26,7 +26,7 @@ export default async function TemplateCatalogPage({
     clientContentWorkspace(session, siteId),
     searchParams,
   ]);
-  if (!catalog || !workspace?.assignment) notFound();
+  if (!catalog || !workspace) notFound();
   const assignment = workspace.assignment;
   return (
     <>
@@ -60,7 +60,7 @@ export default async function TemplateCatalogPage({
                     <input type="hidden" name="action" value="template_change" />
                     <input type="hidden" name="site_id" value={siteId} />
                     <input type="hidden" name="template_version_id" value={option.id} />
-                    <input type="hidden" name="assignment_version" value={assignment.version} />
+                    <input type="hidden" name="assignment_version" value={assignment?.version ?? ""} />
                     <input type="hidden" name="idempotency_key" value={randomUUID()} />
                     <OperationSubmit
                       className="client-button"

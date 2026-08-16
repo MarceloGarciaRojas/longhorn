@@ -671,15 +671,17 @@ test("Pulso Club output is deterministic, immutable and resilient to valid long 
   assert.match(first.text.join(""), new RegExp(`D?${input.method.description.slice(0, 24)}`));
 });
 
-test("Pulso Club remains isolated from active manifest, catalog and browser state", () => {
+test("Pulso Club is registered exactly for Gym preview without browser state", () => {
   const source = readFileSync(
     new URL("../../src/content/renderers/gym-pulso-view.tsx", import.meta.url),
     "utf8",
   );
   const keys = registeredRendererKeys();
 
-  assert.equal(keys.includes("gym-pulso-v1"), false);
-  assert.equal(rendererIsCompatible("gym-pulso-v1", "gym", "gym.v1", 1), false);
+  assert.equal(keys.includes("gym-pulso-v1"), true);
+  assert.equal(rendererIsCompatible("gym-pulso-v1", "gym", "gym.v1", 1), true);
+  assert.equal(rendererIsCompatible("gym-pulso-v1", "restaurant", "gym.v1", 1), false);
+  assert.equal(rendererIsCompatible("gym-pulso-v1", "gym", "restaurant.v2", 2), false);
   assert.doesNotMatch(source, /Pulso Club|Gimnasio Pulso|Nexo Fuerza Ficticio/);
   assert.doesNotMatch(source, /tenant_id|fetch\(|query\(|localStorage|\/admin|contraseñ|password/i);
   assert.doesNotMatch(source, /confirmar reserva|crear reserva|reservar cupo|bookGym/i);
