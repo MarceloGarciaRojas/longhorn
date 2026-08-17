@@ -35,7 +35,6 @@ export interface AlphaConfig {
   hyperdriveId: string;
   hyperdriveCaching: "disabled";
   mediaBucket: string;
-  databaseAdminUrl: string;
   databaseMigrationUrl: string;
   databaseApplicationUrl: string;
 }
@@ -115,7 +114,6 @@ export function loadAlphaConfig(
     hyperdriveId,
     hyperdriveCaching: "disabled",
     mediaBucket,
-    databaseAdminUrl: readDatabaseUrl("admin", source),
     databaseMigrationUrl: readDatabaseUrl("migration", source),
     databaseApplicationUrl: readDatabaseUrl("application", source),
   });

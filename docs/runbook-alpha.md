@@ -115,9 +115,41 @@ Eliminar `TEST_DATABASE_URL`. Todas las URLs PostgreSQL deben incluir
 
 Desde `site/`, con Node 24.14.0 y pnpm 11.9.0:
 
+### Fase 1 — bootstrap PostgreSQL sin dependencias circulares
+
+Antes de que existan los roles, configurar solamente:
+
+```text
+APP_ENV=alpha
+ALPHA_RESOURCE_GUARD=nexi-alpha
+SUPABASE_URL=<URL exacta del proyecto nexi-alpha>
+DATABASE_ADMIN_URL=<conexión administrativa TLS del mismo proyecto>
+ALPHA_APP_DB_PASSWORD=<secreto aleatorio de 32+ caracteres>
+ALPHA_MIGRATOR_DB_PASSWORD=<secreto distinto de 32+ caracteres>
+```
+
+Eliminar `TEST_DATABASE_URL` y no ejecutar desde CI. El loader de bootstrap
+comprueba que `DATABASE_ADMIN_URL` sea remota, use TLS y corresponda exactamente
+al project ref derivado de `SUPABASE_URL`. No requiere ni consulta Hyperdrive,
+Worker, `DATABASE_MIGRATION_URL` o `DATABASE_URL`.
+
+```text
+pnpm alpha:db:provision
+```
+
+Este es el único comando que consume `DATABASE_ADMIN_URL`. Crea o rota
+`nexi_migrator` y `nexi_app` con `NOSUPERUSER`, `NOCREATEDB`, `NOCREATEROLE`,
+`NOINHERIT` y `NOBYPASSRLS`, sin imprimir passwords.
+
+### Fase 2 — conexiones restringidas e infraestructura completa
+
+Después del bootstrap, construir `DATABASE_MIGRATION_URL` con
+`nexi_migrator` y `DATABASE_URL` con `nexi_app`. Crear entonces la única
+configuración Hyperdrive con `nexi_app` y caching deshabilitado; registrar su ID
+y completar las demás variables del archivo Alpha. Recién entonces ejecutar:
+
 ```text
 pnpm alpha:preflight
-pnpm alpha:db:provision
 pnpm alpha:db:migrate
 pnpm alpha:db:status
 pnpm alpha:db:check

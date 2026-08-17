@@ -122,7 +122,7 @@ variable inválida, pero nunca imprimen su valor.
 | `pnpm db:reset` | Revierte y reconstruye únicamente una base local/test. |
 | `pnpm db:check` | Comprueba la conexión del rol `nexi_app`. |
 | `pnpm alpha:preflight` | Valida configuración Alpha sin imprimir secretos ni acceder a red. |
-| `pnpm alpha:db:provision` | Crea/rota roles restringidos mediante credenciales Alpha locales. |
+| `pnpm alpha:db:provision` | Bootstrap fail-closed de roles con guard, project ref y URL administrativa; no requiere Hyperdrive ni URLs restringidas. |
 | `pnpm alpha:db:migrate` | Aplica migraciones versionadas en Alpha; no ejecuta seeds. |
 | `pnpm alpha:db:status` | Informa migraciones Alpha sin usar CI. |
 | `pnpm alpha:db:check` | Comprueba el rol `nexi_app` de Alpha. |

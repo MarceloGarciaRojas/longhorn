@@ -1,17 +1,10 @@
-import { loadAlphaConfig } from "../../src/alpha/config";
+import {
+  ALPHA_DATABASE_PROVISIONED_MESSAGE,
+  loadAlphaDatabaseBootstrapConfig,
+} from "../../src/alpha/db-bootstrap-config";
 import { createDatabasePool } from "../../src/db/pool";
 
-function password(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value || value.length < 32) {
-    throw new Error(`${name} must contain at least 32 characters`);
-  }
-  return value;
-}
-
-const config = loadAlphaConfig();
-const appPassword = password("ALPHA_APP_DB_PASSWORD");
-const migratorPassword = password("ALPHA_MIGRATOR_DB_PASSWORD");
+const config = loadAlphaDatabaseBootstrapConfig();
 const pool = createDatabasePool({
   connectionString: config.databaseAdminUrl,
   applicationName: "nexi-alpha-provision",
@@ -22,10 +15,10 @@ const client = await pool.connect();
 try {
   await client.query("BEGIN");
   await client.query("SELECT set_config('nexi.app_password',$1,true)", [
-    appPassword,
+    config.applicationPassword,
   ]);
   await client.query("SELECT set_config('nexi.migrator_password',$1,true)", [
-    migratorPassword,
+    config.migratorPassword,
   ]);
   await client.query(`
     DO $provision$
@@ -70,7 +63,7 @@ try {
     GRANT USAGE ON SCHEMA public TO nexi_app;
   `);
   await client.query("COMMIT");
-  console.log("Alpha PostgreSQL roles provisioned without exposing credentials.");
+  console.log(ALPHA_DATABASE_PROVISIONED_MESSAGE);
 } catch (error) {
   await client.query("ROLLBACK").catch(() => undefined);
   throw error;
