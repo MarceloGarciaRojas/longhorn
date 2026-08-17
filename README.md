@@ -9,9 +9,12 @@ El repositorio contiene la landing de nexi, persistencia PostgreSQL con Row
 Level Security, autenticación y sesiones opacas, los paneles administrativo y
 cliente, contenido estructurado `restaurant.v1/v2`, biblioteca multimedia
 local/CI y un onboarding operativo completo desde solicitud hasta publicación
-verificada. Otros rubros, proveedores productivos, pagos y tienda no están
-implementados. El catálogo local/CI actual tiene tres plantillas de restaurante
-operativas: Classic, Modern y Restaurante Editorial.
+verificada. El núcleo reconoce Restaurante y Gimnasio de forma cerrada. El
+catálogo local/CI tiene tres plantillas de Restaurante operativas —Classic,
+Modern y Restaurante Editorial— y una plantilla Pulso Club disponible solo en
+catálogo y preview privados de Gimnasio. Gym no tiene selección, editor,
+publicación, restauración, onboarding ni resolución pública. Proveedores
+productivos, pagos y tienda no están implementados.
 
 La aplicación ejecutable se encuentra en [`site/`](site/README.md).
 
@@ -25,3 +28,7 @@ las condiciones pendientes se mantienen en el
 
 La Etapa 9B está implementada en local y CI. No se han habilitado staging,
 producción ni proveedores productivos.
+
+La Etapa 10A.5 fue integrada mediante el Pull Request #10. La estabilización
+del E2E multimedia y su cierre técnico se documentan en
+[`docs/etapa-10a6-estabilizacion-ci.md`](docs/etapa-10a6-estabilizacion-ci.md).

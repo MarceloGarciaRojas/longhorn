@@ -7,9 +7,8 @@ import sharp from "sharp";
 
 const { Pool } = pg;
 const port = 33_300 + Math.floor(Math.random() * 200);
-const mediaPort = 43_300 + Math.floor(Math.random() * 200);
 const baseUrl = `http://127.0.0.1:${port}`;
-const mediaUrl = `http://127.0.0.1:${mediaPort}`;
+let mediaUrl = "";
 const clientAPassword = randomBytes(24).toString("base64url");
 const clientBPassword = randomBytes(24).toString("base64url");
 const adminPassword = randomBytes(24).toString("base64url");
@@ -19,23 +18,94 @@ let mediaServer;
 let serverOutput = "";
 let mediaOutput = "";
 
+const STARTUP_TIMEOUT_MS = 30_000;
+const STOP_TIMEOUT_MS = 2_000;
+
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function outputTail(output) {
+  const normalized = output.trim();
+  return normalized ? normalized.slice(-4_000) : "(no process output)";
+}
+
+function processStopped(processHandle) {
+  return processHandle.exitCode !== null || processHandle.signalCode !== null;
+}
+
+function startupError(label, processHandle, output) {
+  return new Error(
+    `${label} exited before readiness (code=${String(processHandle.exitCode)}, ` +
+      `signal=${String(processHandle.signalCode)})\n${outputTail(output)}`,
+  );
+}
+
 function cookieFrom(response) {
   const match = /nexi_session=([^;]+)/.exec(response.headers.get("set-cookie") || "");
   assert.ok(match);
   return `nexi_session=${match[1]}`;
 }
 
-async function ready(url, label) {
-  const deadline = Date.now() + 30_000;
+async function ready(url, label, processHandle, processOutput) {
+  const deadline = Date.now() + STARTUP_TIMEOUT_MS;
   while (Date.now() < deadline) {
+    if (processStopped(processHandle)) {
+      await delay(25);
+      throw startupError(label, processHandle, processOutput());
+    }
     try {
       if ((await fetch(url)).ok) return;
     } catch {
       // Process is still starting.
     }
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await delay(150);
   }
-  throw new Error(`${label} did not start`);
+  throw new Error(
+    `${label} did not become ready within ${STARTUP_TIMEOUT_MS} ms\n` +
+      outputTail(processOutput()),
+  );
+}
+
+async function readyMediaService(processHandle) {
+  const deadline = Date.now() + STARTUP_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    if (processStopped(processHandle)) {
+      await delay(25);
+      throw startupError("media service", processHandle, mediaOutput);
+    }
+    const match = /nexi local media service ready on 127\.0\.0\.1:(\d+)/
+      .exec(mediaOutput);
+    if (match) {
+      const url = `http://127.0.0.1:${match[1]}`;
+      await ready(`${url}/health`, "media service", processHandle, () => mediaOutput);
+      return url;
+    }
+    await delay(25);
+  }
+  throw new Error(
+    `media service did not report its address within ${STARTUP_TIMEOUT_MS} ms\n` +
+      outputTail(mediaOutput),
+  );
+}
+
+async function stopProcess(processHandle, label) {
+  if (!processHandle || processStopped(processHandle)) return;
+  processHandle.kill();
+  await Promise.race([
+    new Promise((resolve) => processHandle.once("exit", resolve)),
+    delay(STOP_TIMEOUT_MS),
+  ]);
+  if (!processStopped(processHandle)) {
+    processHandle.kill("SIGKILL");
+    await Promise.race([
+      new Promise((resolve) => processHandle.once("exit", resolve)),
+      delay(STOP_TIMEOUT_MS),
+    ]);
+  }
+  if (!processStopped(processHandle)) {
+    throw new Error(`${label} did not stop after SIGKILL`);
+  }
 }
 
 async function login(
@@ -91,8 +161,8 @@ test.before(async () => {
     APP_ENV: "test",
     APP_URL: baseUrl,
     MEDIA_STORAGE_PROVIDER: "local",
-    MEDIA_LOCAL_SERVICE_URL: mediaUrl,
-    MEDIA_LOCAL_SERVICE_PORT: String(mediaPort),
+    MEDIA_LOCAL_SERVICE_URL: "http://127.0.0.1:0",
+    MEDIA_LOCAL_SERVICE_PORT: "0",
   };
   mediaServer = spawn(
     process.execPath,
@@ -101,7 +171,10 @@ test.before(async () => {
   );
   mediaServer.stdout.on("data", (chunk) => { mediaOutput += String(chunk); });
   mediaServer.stderr.on("data", (chunk) => { mediaOutput += String(chunk); });
-  await ready(`${mediaUrl}/health`, "media service");
+  mediaServer.on("error", (error) => { mediaOutput += `${String(error)}\n`; });
+  mediaUrl = await readyMediaService(mediaServer);
+  common.MEDIA_LOCAL_SERVICE_URL = mediaUrl;
+  common.MEDIA_LOCAL_SERVICE_PORT = new URL(mediaUrl).port;
   const pool = new Pool({ connectionString: process.env.DATABASE_MIGRATION_URL, max: 1 });
   await pool.query(
     "TRUNCATE public.auth_sessions,public.auth_audit_events,public.auth_rate_limits RESTART IDENTITY",
@@ -148,17 +221,16 @@ test.before(async () => {
   );
   server.stdout.on("data", (chunk) => { serverOutput += String(chunk); });
   server.stderr.on("data", (chunk) => { serverOutput += String(chunk); });
-  await ready(`${baseUrl}/api/health`, "application");
+  server.on("error", (error) => { serverOutput += `${String(error)}\n`; });
+  await ready(`${baseUrl}/api/health`, "application", server, () => serverOutput);
 });
 
 test.after(async () => {
-  for (const processHandle of [server, mediaServer]) {
-    if (!processHandle || processHandle.killed) continue;
-    processHandle.kill();
-    await Promise.race([
-      new Promise((resolve) => processHandle.once("exit", resolve)),
-      new Promise((resolve) => setTimeout(resolve, 2_000)),
-    ]);
+  for (const [processHandle, label] of [
+    [server, "application"],
+    [mediaServer, "media service"],
+  ]) {
+    await stopProcess(processHandle, label);
   }
 });
 

@@ -21,7 +21,12 @@ async function serve(): Promise<void> {
   const port = Number(process.env.MEDIA_LOCAL_SERVICE_PORT || "43127");
   const server = createLocalMediaServer();
   server.listen(port, "127.0.0.1", () => {
-    console.log(`nexi local media service ready on 127.0.0.1:${port}`);
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      server.close();
+      throw new Error("media_local_service_address_unavailable");
+    }
+    console.log(`nexi local media service ready on 127.0.0.1:${address.port}`);
   });
 }
 
