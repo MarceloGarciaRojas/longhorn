@@ -2,6 +2,13 @@ export const APP_ENVIRONMENTS = [
   "local",
   "test",
   "development",
+  "alpha",
+  "staging",
+  "production",
+] as const;
+
+export const DEPLOYED_APP_ENVIRONMENTS = [
+  "alpha",
   "staging",
   "production",
 ] as const;
@@ -10,6 +17,14 @@ export const LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
 
 export type AppEnvironment = (typeof APP_ENVIRONMENTS)[number];
 export type LogLevel = (typeof LOG_LEVELS)[number];
+
+export function isDeployedEnvironment(
+  environment: AppEnvironment,
+): environment is (typeof DEPLOYED_APP_ENVIRONMENTS)[number] {
+  return DEPLOYED_APP_ENVIRONMENTS.includes(
+    environment as (typeof DEPLOYED_APP_ENVIRONMENTS)[number],
+  );
+}
 
 export interface AppConfig {
   applicationName: "nexi";
@@ -57,7 +72,7 @@ function readPublicUrl(
   environment: AppEnvironment,
 ): string {
   const value = source.APP_URL?.trim();
-  if (!value && (environment === "staging" || environment === "production")) {
+  if (!value && isDeployedEnvironment(environment)) {
     throw new AppConfigError("APP_URL", `it is required in ${environment}`);
   }
 
@@ -66,6 +81,9 @@ function readPublicUrl(
     const url = new URL(candidate);
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       throw new Error("unsupported protocol");
+    }
+    if (isDeployedEnvironment(environment) && url.protocol !== "https:") {
+      throw new Error("HTTPS required");
     }
     return url.toString().replace(/\/$/, "");
   } catch {
@@ -78,7 +96,7 @@ function readDeletionGraceHours(
   environment: AppEnvironment,
 ): 24 | 48 {
   const raw = source.SITE_DELETION_GRACE_HOURS?.trim();
-  if (!raw && (environment === "staging" || environment === "production")) {
+  if (!raw && isDeployedEnvironment(environment)) {
     throw new AppConfigError(
       "SITE_DELETION_GRACE_HOURS",
       `it is required in ${environment}`,

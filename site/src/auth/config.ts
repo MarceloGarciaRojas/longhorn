@@ -1,4 +1,9 @@
-import type { AppEnvironment, EnvironmentSource } from "@/src/config/app-config";
+import {
+  APP_ENVIRONMENTS,
+  isDeployedEnvironment,
+  type AppEnvironment,
+  type EnvironmentSource,
+} from "@/src/config/app-config";
 import { AuthConfigurationError } from "./errors";
 import type { AuthProviderName } from "./types";
 
@@ -18,13 +23,7 @@ export interface AuthConfig {
   invitationTtlSeconds: number;
 }
 
-const ENVIRONMENTS = new Set<AppEnvironment>([
-  "local",
-  "test",
-  "development",
-  "staging",
-  "production",
-]);
+const ENVIRONMENTS = new Set<AppEnvironment>(APP_ENVIRONMENTS);
 
 function readInteger(
   source: EnvironmentSource,
@@ -94,7 +93,7 @@ export function loadAuthConfig(
   const securityPepper = source.AUTH_SECURITY_PEPPER?.trim();
   if (
     !securityPepper &&
-    (environment === "staging" || environment === "production")
+    isDeployedEnvironment(environment)
   ) {
     throw new AuthConfigurationError(
       "AUTH_SECURITY_PEPPER",
@@ -132,8 +131,7 @@ export function loadAuthConfig(
     }
   }
 
-  const cookieSecure =
-    environment === "staging" || environment === "production";
+  const cookieSecure = isDeployedEnvironment(environment);
 
   return Object.freeze({
     environment,

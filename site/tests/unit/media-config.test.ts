@@ -29,3 +29,24 @@ test("local provider is fail-closed in staging and production", () => {
     assert.equal(loadMediaConfig({ APP_ENV }).provider, "unconfigured");
   }
 });
+
+test("alpha requires persistent Supabase storage and rejects local storage", () => {
+  assert.throws(
+    () => loadMediaConfig({ APP_ENV: "alpha" }),
+    /requires the persistent supabase provider/,
+  );
+  assert.throws(
+    () => loadMediaConfig({ APP_ENV: "alpha", MEDIA_STORAGE_PROVIDER: "local" }),
+    /forbidden/,
+  );
+  const config = loadMediaConfig({
+    APP_ENV: "alpha",
+    MEDIA_STORAGE_PROVIDER: "supabase",
+    SUPABASE_URL: "https://project.supabase.co",
+    SUPABASE_SECRET_KEY: "secret-value",
+    MEDIA_SUPABASE_BUCKET: "nexi-alpha-media",
+  });
+  assert.equal(config.provider, "supabase");
+  assert.equal(config.supabaseBucket, "nexi-alpha-media");
+  assert.equal(config.localServiceUrl, undefined);
+});

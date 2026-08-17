@@ -1,12 +1,15 @@
 import type { AppEnvironment, EnvironmentSource } from "@/src/config/app-config";
 import { APP_ENVIRONMENTS } from "@/src/config/app-config";
 
-export type MediaStorageProvider = "local" | "unconfigured";
+export type MediaStorageProvider = "local" | "supabase" | "unconfigured";
 
 export interface MediaConfig {
   environment: AppEnvironment;
   provider: MediaStorageProvider;
   localServiceUrl?: string;
+  supabaseUrl?: string;
+  supabaseSecretKey?: string;
+  supabaseBucket?: string;
   uploadMaxBytes: number;
   maxWidth: number;
   maxHeight: number;
@@ -86,10 +89,10 @@ export function loadMediaConfig(
     (appEnvironment === "local" || appEnvironment === "test"
       ? "local"
       : "unconfigured");
-  if (!["local", "unconfigured"].includes(requestedProvider)) {
+  if (!["local", "supabase", "unconfigured"].includes(requestedProvider)) {
     throw new MediaConfigurationError(
       "MEDIA_STORAGE_PROVIDER",
-      "expected local or unconfigured",
+      "expected local, supabase or unconfigured",
     );
   }
   if (
@@ -101,13 +104,28 @@ export function loadMediaConfig(
       "the local provider is forbidden outside local and test",
     );
   }
-  if (
-    ["staging", "production"].includes(appEnvironment) &&
-    requestedProvider !== "unconfigured"
-  ) {
+  if (["staging", "production"].includes(appEnvironment) && requestedProvider !== "unconfigured") {
     throw new MediaConfigurationError(
       "MEDIA_STORAGE_PROVIDER",
       "production media storage has not been authorized",
+    );
+  }
+  if (appEnvironment === "alpha" && requestedProvider !== "supabase") {
+    throw new MediaConfigurationError(
+      "MEDIA_STORAGE_PROVIDER",
+      "alpha requires the persistent supabase provider",
+    );
+  }
+  const supabaseUrl = source.SUPABASE_URL?.trim();
+  const supabaseSecretKey = source.SUPABASE_SECRET_KEY?.trim();
+  const supabaseBucket = source.MEDIA_SUPABASE_BUCKET?.trim();
+  if (
+    requestedProvider === "supabase" &&
+    (!supabaseUrl || !supabaseSecretKey || !supabaseBucket)
+  ) {
+    throw new MediaConfigurationError(
+      "MEDIA_SUPABASE_BUCKET",
+      "Supabase URL, server secret and bucket are required",
     );
   }
   const processingMode = source.MEDIA_PROCESSING_MODE?.trim() || "synchronous";
@@ -122,6 +140,11 @@ export function loadMediaConfig(
     provider: requestedProvider as MediaStorageProvider,
     localServiceUrl:
       requestedProvider === "local" ? localUrl(source) : undefined,
+    supabaseUrl: requestedProvider === "supabase" ? supabaseUrl : undefined,
+    supabaseSecretKey:
+      requestedProvider === "supabase" ? supabaseSecretKey : undefined,
+    supabaseBucket:
+      requestedProvider === "supabase" ? supabaseBucket : undefined,
     uploadMaxBytes: integer(
       source,
       "MEDIA_UPLOAD_MAX_BYTES",
@@ -141,4 +164,17 @@ export function loadMediaConfig(
     ),
     processingMode,
   });
+}
+
+export function mediaDatabaseProvider(
+  source: EnvironmentSource = process.env,
+): "local" | "supabase" {
+  const provider = loadMediaConfig(source).provider;
+  if (provider === "unconfigured") {
+    throw new MediaConfigurationError(
+      "MEDIA_STORAGE_PROVIDER",
+      "a persistent or local provider is required",
+    );
+  }
+  return provider;
 }

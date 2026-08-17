@@ -56,6 +56,18 @@ test("onboarding configuration is local/test only and restaurant-only", () => {
       }),
     /Only restaurant/,
   );
+  assert.equal(
+    loadOnboardingConfig({ APP_ENV: "alpha" }).publicFormEnabled,
+    false,
+  );
+  assert.throws(
+    () =>
+      loadOnboardingConfig({
+        APP_ENV: "alpha",
+        ONBOARDING_PUBLIC_FORM_ENABLED: "true",
+      }),
+    /restricted/,
+  );
 });
 
 test("public intake normalizes values without accepting code or hidden fields", () => {

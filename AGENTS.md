@@ -10,6 +10,7 @@
 - Toda autorización deberá validarse posteriormente en backend.
 - No se deben almacenar secretos, tokens ni credenciales en el repositorio.
 - El proyecto debe operar inicialmente con herramientas gratuitas, open source o free tier.
+- La Etapa 10B.1 prepara un ambiente `alpha` fail-closed con Cloudflare Workers/Hyperdrive y Supabase Free para PostgreSQL, Auth y Storage. No existe aún despliegue ni recurso aprovisionado; el procesamiento multimedia Alpha sigue bloqueado hasta conectar un proceso Node persistente. La guía operativa vigente es `docs/runbook-alpha.md`.
 - `docs/contrato-producto-b1.md` es la fuente viva del alcance B1 y prevalece sobre decisiones de producto anteriores del 14–15 de julio de 2026; los ADR conservan autoridad para sus decisiones técnicas compatibles.
 - Flow forma parte del roadmap ejecutable B1, pero no está implementado ni autorizado por esta regla. No se deben habilitar cobros automáticos, renovaciones automáticas ni servicios pagados sin aprobación expresa.
 - La gestión de suscripción nexi y los pagos de clientes finales a comercios son dominios distintos. Cuando exista pago online comercial, cada comercio vinculará su propia cuenta si Flow lo permite; nexi no debe custodiar innecesariamente fondos de ventas.

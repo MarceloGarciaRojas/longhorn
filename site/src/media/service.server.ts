@@ -10,7 +10,10 @@ import {
   OperationValidationError,
   UUID,
 } from "@/src/operations/validation";
-import { processLocalMedia, readLocalMedia } from "./local-client.server";
+import { processLocalMedia } from "./local-client.server";
+import { mediaDatabaseProvider } from "./config";
+import { readConfiguredMedia } from "./runtime-storage.server";
+import type { StoredObject } from "./storage";
 import type {
   MediaAllowedMimeType,
   MediaAssetRecord,
@@ -192,6 +195,7 @@ async function reserveUpload(
     correlationId: string;
   },
 ): Promise<{ assetId: string; tenantId: string; replay: boolean }> {
+  const storageProvider = mediaDatabaseProvider();
   return withMediaContext(session, input.correlationId, async (client) => {
     const site = await siteForWrite(client, session, input.siteId);
     const existing = await client.query<{ id: string; status: MediaAssetStatus }>(
@@ -260,7 +264,7 @@ async function reserveUpload(
          id,tenant_id,site_id,source_kind,storage_provider,original_filename,
          display_name,detected_mime_type,byte_size,status,uploaded_by_user_id,
          upload_idempotency_key
-       ) VALUES($1,$2,$3,'uploaded','local',$4,$5,$6,$7,'processing',$8,$9)`,
+       ) VALUES($1,$2,$3,'uploaded',$10,$4,$5,$6,$7,'processing',$8,$9)`,
       [
         assetId,
         site.tenantId,
@@ -271,6 +275,7 @@ async function reserveUpload(
         input.byteSize,
         session.userId,
         input.idempotencyKey,
+        storageProvider,
       ],
     );
     await audit(client, {
@@ -358,7 +363,7 @@ export async function uploadMedia(
           `INSERT INTO public.media_variants(
              tenant_id,site_id,asset_id,variant_name,storage_provider,storage_key,
              mime_type,byte_size,width,height,checksum_sha256,status
-           ) VALUES($1,$2,$3,$4,'local',$5,$6,$7,$8,$9,$10,'ready')`,
+           ) VALUES($1,$2,$3,$4,$11,$5,$6,$7,$8,$9,$10,'ready')`,
           [
             reserved.tenantId,
             siteId,
@@ -370,6 +375,7 @@ export async function uploadMedia(
             variant.width,
             variant.height,
             variant.checksum,
+            mediaDatabaseProvider(),
           ],
         );
       }
@@ -588,7 +594,7 @@ export async function privateMediaObject(
   session: AuthSession,
   assetId: string,
   variant: MediaVariantName,
-): Promise<Awaited<ReturnType<typeof readLocalMedia>> | null> {
+): Promise<StoredObject | null> {
   if (!UUID.test(assetId) || !["thumbnail", "card", "hero"].includes(variant)) {
     return null;
   }
@@ -608,14 +614,14 @@ export async function privateMediaObject(
     );
     return result.rows[0] ?? null;
   });
-  return row ? readLocalMedia(row.storageKey) : null;
+  return row ? readConfiguredMedia(row.storageKey) : null;
 }
 
 export async function publicMediaObject(
   assetId: string,
   variant: MediaVariantName,
   checksum: string,
-): Promise<Awaited<ReturnType<typeof readLocalMedia>> | null> {
+): Promise<StoredObject | null> {
   if (
     !UUID.test(assetId) ||
     !["thumbnail", "card", "hero"].includes(variant) ||
@@ -629,7 +635,7 @@ export async function publicMediaObject(
     );
     return result.rows[0] ?? null;
   });
-  return row ? readLocalMedia(row.storageKey) : null;
+  return row ? readConfiguredMedia(row.storageKey) : null;
 }
 
 export async function mediaManifestForOwner(
