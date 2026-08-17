@@ -22,6 +22,7 @@ import {
   compatibleTemplateCatalog,
   rendererOnboardingIsAllowed,
   rendererPublicationIsAllowed,
+  rendererPublicResolutionIsAllowed,
   templatePreviewIsAllowed,
   templateSelectionIsAllowed,
 } from "../../src/content/template-capabilities";
@@ -120,6 +121,19 @@ test("renderer registry adds only the closed Pulso Club Gym renderer", () => {
   assert.equal(templatePreviewIsAllowed(gymCatalog[0]), true);
   assert.equal(templateSelectionIsAllowed(gymCatalog[0]), false);
   assert.equal(rendererPublicationIsAllowed("gym-pulso-v1", "gym"), false);
+  assert.equal(
+    rendererPublicResolutionIsAllowed("gym-pulso-v1", "gym", "gym.v1", 1),
+    false,
+  );
+  assert.equal(
+    rendererPublicResolutionIsAllowed(
+      "restaurant-modern-v1",
+      "restaurant",
+      "restaurant.v2",
+      2,
+    ),
+    true,
+  );
   assert.equal(rendererOnboardingIsAllowed("gym-pulso-v1", "gym"), false);
 });
 

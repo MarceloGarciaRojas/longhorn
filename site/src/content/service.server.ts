@@ -17,6 +17,7 @@ import { normalizeHostname } from "@/src/tenancy/public-host";
 import { rendererIsCompatible } from "./renderer-manifest";
 import {
   rendererPublicationIsAllowed,
+  rendererPublicResolutionIsAllowed,
   templateCatalogOrder,
   templatePreviewIsAllowed,
   templateSelectionIsAllowed,
@@ -707,6 +708,7 @@ export async function adminPreviewAlternativeTemplate(
       client,
       { draftId: current.draft.id },
       "private",
+      "nexi_admin",
     );
     await mediaAudit(client, {
       tenantId: current.tenantId,
@@ -1530,7 +1532,7 @@ export async function resolvePublicSite(input: {
           "publication",
         );
         if (!row.rendererKey || !row.schemaKey || !row.schemaVersion ||
-            !rendererIsCompatible(
+            !rendererPublicResolutionIsAllowed(
               row.rendererKey,
               row.industryKey,
               row.schemaKey,

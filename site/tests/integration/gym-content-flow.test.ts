@@ -6,6 +6,7 @@ import { createAuthSession } from "../../src/auth/auth-repository.server";
 import { createSessionToken, hashSessionToken } from "../../src/auth/security";
 import type { AuthSession } from "../../src/auth/types";
 import {
+  adminPreviewAlternativeTemplate,
   clientCompatibleTemplates,
   clientChangeTemplate,
   clientContentWorkspace,
@@ -57,6 +58,36 @@ async function sessionFor(
     identityProvider: "test",
     audience: "client_admin",
     assuranceLevel: "aal1",
+    expiresAt,
+  };
+}
+
+async function adminSession(): Promise<AuthSession> {
+  const token = createSessionToken();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  const sessionId = await createAuthSession({
+    tokenHash: hashSessionToken(token),
+    userId: SYNTHETIC_DATA.userAdmin.id,
+    identityProvider: "test",
+    identitySubject: SYNTHETIC_DATA.identityAdmin.providerSubject,
+    audience: "nexi_admin",
+    assuranceLevel: "aal2",
+    activeTenantId: null,
+    expiresAt,
+    userAgentHash: null,
+    ipHash: null,
+  });
+  return {
+    sessionId,
+    userId: SYNTHETIC_DATA.userAdmin.id,
+    identityProvider: "test",
+    identitySubject: SYNTHETIC_DATA.identityAdmin.providerSubject,
+    email: SYNTHETIC_DATA.userAdmin.email,
+    displayName: SYNTHETIC_DATA.userAdmin.displayName,
+    audience: "nexi_admin",
+    assuranceLevel: "aal2",
+    activeTenantId: null,
+    activeTenantName: null,
     expiresAt,
   };
 }
@@ -212,7 +243,7 @@ test("gym.v1 exposes only an isolated private preview while mutations stay close
     (error: unknown) => (error as { code?: string }).code === "23514",
   );
 
-  const [clientA, clientB] = await Promise.all([
+  const [clientA, clientB, admin] = await Promise.all([
     sessionFor({
       userId: SYNTHETIC_DATA.userA.id,
       identitySubject: SYNTHETIC_DATA.identityA.providerSubject,
@@ -229,6 +260,7 @@ test("gym.v1 exposes only an isolated private preview while mutations stay close
       activeTenantId: SYNTHETIC_DATA.tenantB.id,
       activeTenantName: SYNTHETIC_DATA.tenantB.displayName,
     }),
+    adminSession(),
   ]);
 
   assert.equal(await clientContentWorkspace(clientA, GYM_SITE_ID), null);
@@ -421,6 +453,19 @@ test("gym.v1 exposes only an isolated private preview while mutations stay close
   assert.equal(
     previewWithMedia?.media[GYM_ASSET_ID]?.hero?.url.includes(GYM_ASSET_ID),
     true,
+  );
+  assert.equal(
+    previewWithMedia?.media[GYM_ASSET_ID]?.hero?.url,
+    `/api/media/private/${GYM_ASSET_ID}/hero`,
+  );
+  const adminPreviewWithMedia = await adminPreviewAlternativeTemplate(
+    admin,
+    GYM_SITE_ID,
+    pulso.id,
+  );
+  assert.equal(
+    adminPreviewWithMedia?.media[GYM_ASSET_ID]?.hero?.url,
+    `/api/media/private/${GYM_ASSET_ID}/hero?audience=admin`,
   );
   for (const assetId of [
     GYM_FIXTURE_IDS.logo,

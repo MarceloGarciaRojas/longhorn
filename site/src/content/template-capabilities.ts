@@ -106,6 +106,16 @@ export function rendererPublicationIsAllowed(
     rendererSupportsIndustry(rendererKey, industryKey);
 }
 
+export function rendererPublicResolutionIsAllowed(
+  rendererKey: string,
+  industryKey: unknown,
+  schemaKey: string,
+  schemaVersion: number,
+): boolean {
+  return rendererPublicationIsAllowed(rendererKey, industryKey) &&
+    rendererIsCompatible(rendererKey, industryKey, schemaKey, schemaVersion);
+}
+
 export function rendererOnboardingIsAllowed(
   rendererKey: string,
   industryKey: unknown,

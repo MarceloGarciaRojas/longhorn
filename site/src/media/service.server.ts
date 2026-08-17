@@ -636,6 +636,7 @@ export async function mediaManifestForOwner(
   client: Pick<PoolClient, "query">,
   owner: { draftId?: string; publicationId?: string },
   visibility: "private" | "public",
+  privateAudience: "client_admin" | "nexi_admin" = "client_admin",
 ): Promise<MediaRenderManifest> {
   const ownerColumn = owner.draftId ? "draft_id" : "publication_id";
   const ownerId = owner.draftId ?? owner.publicationId;
@@ -665,7 +666,9 @@ export async function mediaManifestForOwner(
     manifest[row.assetId][row.variantName] = {
       url: visibility === "public"
         ? `/media/${row.assetId}/${row.variantName}/${row.checksum}`
-        : `/api/media/private/${row.assetId}/${row.variantName}`,
+        : `/api/media/private/${row.assetId}/${row.variantName}${
+          privateAudience === "nexi_admin" ? "?audience=admin" : ""
+        }`,
       width: row.width,
       height: row.height,
     };

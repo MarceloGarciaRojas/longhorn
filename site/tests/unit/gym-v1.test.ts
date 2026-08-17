@@ -638,6 +638,16 @@ test("Pulso Club fails closed for incompatible industry, schema and content", ()
 });
 
 test("Pulso Club renders only referenced media with safe internal manifest paths", () => {
+  const admin = gymMediaManifest();
+  admin[GYM_FIXTURE_IDS.hero]!.hero!.url =
+    `/api/media/private/${GYM_FIXTURE_IDS.hero}/hero?audience=admin`;
+  assert.equal(
+    renderGymPulso({ media: admin }).images.some((image) =>
+      image.src === `/api/media/private/${GYM_FIXTURE_IDS.hero}/hero?audience=admin`
+    ),
+    true,
+  );
+
   const unsafe: MediaRenderManifest = {
     [GYM_FIXTURE_IDS.hero]: {
       hero: {
@@ -651,6 +661,13 @@ test("Pulso Club renders only referenced media with safe internal manifest paths
         url: `/media/${GYM_FIXTURE_IDS.gallery}/card/${"b".repeat(64)}`,
         width: 768,
         height: 640,
+      },
+    },
+    [GYM_FIXTURE_IDS.logo]: {
+      thumbnail: {
+        url: `/api/media/private/${GYM_FIXTURE_IDS.logo}/thumbnail?audience=admin&extra=true`,
+        width: 320,
+        height: 320,
       },
     },
   };
