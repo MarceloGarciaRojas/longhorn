@@ -321,11 +321,18 @@ Antes de habilitar un ambiente compartido:
   diferida; la ejecución archiva y nunca borra físicamente.
 - Los dominios se registran, pero no se contratan ni configuran por DNS.
 - La mensajería es interna; no hay correo ni WhatsApp real.
-- Sin Flow o cobros.
+- Sin Flow o cobros implementados; Flow pertenece al roadmap B1, separado de
+  esta descripción del runtime actual.
 - Multimedia habilitada solo en local/CI para imágenes JPEG, PNG y WebP.
-- Sin proveedor multimedia productivo, otros rubros, páginas libres, blog,
-  reservas o tienda.
+- Sin proveedor multimedia productivo. Gym existe solo en catálogo y preview
+  privados; selección, editor, publicación, restauración, onboarding y
+  resolución pública siguen bloqueados. Colegio, Tienda Online, RestApp y
+  PosApp no están implementados.
 - Sin despliegue automático.
+
+El alcance futuro y su orden Alfa/Beta/B1 se rigen por
+[`docs/contrato-producto-b1.md`](../docs/contrato-producto-b1.md); este README
+describe exclusivamente las capacidades ejecutables actuales.
 
 El cierre técnico, las pruebas y la deuda aceptada se documentan en
 [`docs/etapa-7b-sitios-solicitudes-mensajeria.md`](../docs/etapa-7b-sitios-solicitudes-mensajeria.md).

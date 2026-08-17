@@ -20,7 +20,9 @@
 | 10A.3 | Contrato de contenido `gym.v1` y compatibilidad segura | — | 1 | 2026-08 | Auditada; lista para revisión humana | [etapa-10a3-gym-v1.md](etapa-10a3-gym-v1.md) | Vigente | Al cierre de 10A.3: schema, validación, borrador y referencias multimedia Gym; renderer, plantilla, editor, onboarding y publicación Gym aún no estaban implementados. |
 | 10A.4 | Renderer aislado Pulso Club | — | 1 | 2026-08 | Implementación técnica parcial; sin activación funcional | [etapa-10a4-renderer-pulso-club.md](etapa-10a4-renderer-pulso-club.md) | Vigente | Vista `gym-pulso-v1` compatible solo con `gym.v1`; permanece fuera de manifest, registry, plantilla, catálogo, preview, selección, publicación, restauración, editor y onboarding. |
 | 10A.5 | Registro técnico, catálogo y preview de Pulso Club | — | 1 | 2026-08 | Integrada en `main` mediante PR #10 | [etapa-10a5-registro-preview-pulso.md](etapa-10a5-registro-preview-pulso.md) | Vigente | Una plantilla Gym registrada para preview privado; selección, publicación, restauración, editor y onboarding permanecen bloqueados. |
-| 10A.6 | Estabilización de CI y cierre técnico de 10A.5 | — | 1 | 2026-08 | Corrección validada localmente y CI técnica aprobada; revisión humana pendiente | [etapa-10a6-estabilizacion-ci.md](etapa-10a6-estabilizacion-ci.md) | Vigente | El E2E multimedia usa puerto asignado por el SO, readiness observable, diagnóstico de salida temprana y teardown verificable; no cambia producto. |
+| 10A.6 | Estabilización de CI y cierre técnico de 10A.5 | — | 1 | 2026-08 | Integrada mediante PR #11; CI post-merge aprobada | [etapa-10a6-estabilizacion-ci.md](etapa-10a6-estabilizacion-ci.md) | Vigente | El E2E multimedia usa puerto asignado por el SO, readiness observable, diagnóstico de salida temprana y teardown verificable; no cambia producto. |
+| B1 | Contrato rector de producto B1 | B1 | 1 | 2026-08 | Decisión vigente del Product Owner | [contrato-producto-b1.md](contrato-producto-b1.md) | Rector | Fuente viva para identidad, actores, verticales, apps operativas, pagos, dominios y límites Alfa/Beta/B1; prevalece sobre alcance histórico incompatible. |
+| 10B.0 | Consolidación de alcance B1 y línea de Alfa | — | 1 | 2026-08 | En revisión | [etapa-10b0-consolidacion-b1-alfa.md](etapa-10b0-consolidacion-b1-alfa.md) | Vigente | Auditoría de contradicciones, clasificación A/B/C/D y línea crítica ejecutable hacia Alfa, sin implementación funcional. |
 | MEM-2026-08 | Informe integral de avance | — | 1 | 2026-08 | Memoria de planificación | [informe-integral-avance-proyecto-2026-08-16.md](informe-integral-avance-proyecto-2026-08-16.md) | Vigente al corte | Fotografía técnica y funcional previa a la estabilización 10A.6. |
 | DT | Registro central de deuda técnica | DT-001–DT-009 | 1 | 2026-08 | Vigente | [deuda-tecnica.md](deuda-tecnica.md) | Sí | Remediaciones cerradas y condiciones pendientes para merge, staging y producción. |
 | ADR-000 | Plantilla para decisiones de arquitectura | ADR | 1 | 2026-07 | Vigente | [adr/ADR-000-plantilla.md](adr/ADR-000-plantilla.md) | Sí | Utilizar para nuevas decisiones técnicas. |
@@ -30,7 +32,7 @@
 | ADR-004 | Aislamiento compartido con tenant_id y RLS en el MVP | ADR | 1 | 2026-07 | Aceptado como línea base de arquitectura | [adr/ADR-004-aislamiento-tenant-id-rls.md](adr/ADR-004-aislamiento-tenant-id-rls.md) | Sí | Contexto tenant confiable, autorización server-side y RLS. |
 | ADR-005 | Object storage para medios y documentos | ADR | 1 | 2026-07 | Aceptado | [adr/ADR-005-object-storage-para-medios-y-documentos.md](adr/ADR-005-object-storage-para-medios-y-documentos.md) | Parcial | Decisión histórica; proveedor productivo pendiente. |
 | ADR-006 | API y servicios server-side como frontera de seguridad | ADR | 1 | 2026-07 | Aceptado como línea base de arquitectura | [adr/ADR-006-frontera-server-side.md](adr/ADR-006-frontera-server-side.md) | Sí | El servidor deriva contexto y valida toda operación sensible. |
-| ADR-007 | Gateway de IA e integraciones | ADR | 1 | 2026-07 | Aceptado como línea base de arquitectura | [adr/ADR-007-gateway-ia-e-integraciones.md](adr/ADR-007-gateway-ia-e-integraciones.md) | Parcial | Adaptadores desacoplados; IA productiva e integraciones avanzadas diferidas. |
+| ADR-007 | Gateway de IA e integraciones | ADR | 1 | 2026-07 | Aceptado como línea base de arquitectura | [adr/ADR-007-gateway-ia-e-integraciones.md](adr/ADR-007-gateway-ia-e-integraciones.md) | Parcial | Adaptadores desacoplados; no autoriza conservar Gemini/Google AI heredado en RestApp o PosApp ni activar IA productiva. |
 | ADR-008 | Orquestación transaccional del onboarding y aprobación vinculada | ADR | 1 | 2026-07 | Aceptado local/CI | [adr/ADR-008-orquestacion-onboarding-y-aprobacion.md](adr/ADR-008-orquestacion-onboarding-y-aprobacion.md) | Parcial | Conversión reanudable, checksum e integración con publicación existente. |
 | ADR-009 | PostgreSQL y RLS multi-tenant | ADR | 1 | 2026-07 | Aceptado para prueba técnica | [adr/ADR-009-postgresql-rls-multitenant.md](adr/ADR-009-postgresql-rls-multitenant.md) | Sí | Selección de `pg`, SQL versionado y contexto transaccional. |
 | ADR-010 | Supabase Auth y sesiones opacas | ADR | 1 | 2026-07 | Aceptado para V1 | [adr/ADR-010-supabase-auth-sesiones-opacas.md](adr/ADR-010-supabase-auth-sesiones-opacas.md) | Sí | Proveedor desacoplado, MFA y sesión PostgreSQL. |
@@ -55,3 +57,9 @@
 Los documentos fuente oficiales todavía deben incorporarse de forma controlada
 a `docs/fuentes/`. El directorio conserva por ahora únicamente su marcador y no
 debe interpretarse como una copia completa de la línea base documental.
+
+Mientras esas fuentes históricas no estén versionadas, el
+[contrato rector B1](contrato-producto-b1.md) concentra las decisiones de
+producto vigentes posteriores a la documentación inicial del 14–15 de julio de
+2026. Los cierres de etapa y el registro técnico base permanecen como evidencia
+histórica de su fecha, no como roadmap vigente.

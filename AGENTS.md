@@ -10,10 +10,15 @@
 - Toda autorización deberá validarse posteriormente en backend.
 - No se deben almacenar secretos, tokens ni credenciales en el repositorio.
 - El proyecto debe operar inicialmente con herramientas gratuitas, open source o free tier.
-- No se deben habilitar cobros automáticos ni servicios pagados sin aprobación expresa.
+- `docs/contrato-producto-b1.md` es la fuente viva del alcance B1 y prevalece sobre decisiones de producto anteriores del 14–15 de julio de 2026; los ADR conservan autoridad para sus decisiones técnicas compatibles.
+- Flow forma parte del roadmap ejecutable B1, pero no está implementado ni autorizado por esta regla. No se deben habilitar cobros automáticos, renovaciones automáticas ni servicios pagados sin aprobación expresa.
+- La gestión de suscripción nexi y los pagos de clientes finales a comercios son dominios distintos. Cuando exista pago online comercial, cada comercio vinculará su propia cuenta si Flow lo permite; nexi no debe custodiar innecesariamente fondos de ventas.
 - El alcance B1 autorizado comprende los rubros Restaurante y Gimnasio; Gimnasio se rige por `docs/etapa-10a-contrato-gimnasio.md` y tiene implementación técnica parcial: soporte de industria `gym`, contrato y borradores `gym.v1`, renderer `gym-pulso-v1` y una plantilla Pulso Club visible exclusivamente en catálogo y preview privados. Esta implementación no constituye disponibilidad comercial: Gym continúa sin selección, publicación, restauración, editor, onboarding, staging ni producción.
-- Quedan fuera del MVP inicial: reservas, pagos, portales de clientes, inteligencia artificial productiva, módulos escolares o clínicos, marketplace, agentes y microservicios.
+- Colegio, Tienda Online, RestApp, PosApp y pagos Flow pertenecen a la planificación B1, pero no están implementados y no son requisitos de la primera Alfa salvo que la línea crítica vigente lo indique expresamente.
+- RestApp y PosApp son aplicaciones operativas independientes, no plantillas ni secciones improvisadas del CMS. Su integración futura debe preservar experiencia funcional y visual, compartir identidad/tenant/roles seguros y eliminar totalmente Gemini, Google AI, Firebase/Firestore incompatible, credenciales locales inseguras y autorización solo frontend.
+- Los sitios públicos no muestran accesos administrativos. RestApp y PosApp pueden incluir configuración interna únicamente para usuarios autenticados y autorizados por tenant, rol y permiso.
+- Quedan fuera de B1 las capacidades no comprometidas expresamente en `docs/contrato-producto-b1.md`; no se deben mover funciones dentro o fuera de B1 por inferencia.
 - Los documentos de `docs/fuentes` serán considerados referencias oficiales del proyecto.
-- Ante contradicciones entre documentos, Codex debe informar el conflicto y no decidir silenciosamente.
+- Los documentos históricos conservan contexto, pero no deben tratarse como fuente vigente cuando contradigan `docs/contrato-producto-b1.md`. Toda contradicción nueva debe informarse y resolverse mediante decisión explícita, no silenciosamente.
 - Antes de modificar código, Codex deberá presentar un plan.
 - Codex no debe declarar una tarea terminada sin indicar archivos modificados, validaciones realizadas y riesgos pendientes.

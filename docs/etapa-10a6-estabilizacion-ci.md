@@ -7,7 +7,8 @@
 - **Rama:** `codex/etapa-10a6-estabilizacion-ci`
 - **Estado local:** CORRECCIÓN VALIDADA
 - **CI técnica de la rama:** APROBADA
-- **Pull Request:** #11 (Draft)
+- **Pull Request:** #11 (MERGED)
+- **Merge commit:** `e90cddc9edfbaafc52b9da4667703365b663516b`
 
 ## 1. Incidente
 
@@ -158,7 +159,8 @@ El primer commit validado de la corrección,
 - **Audit y cleanup:** `SUCCESS`;
 - **Deployments:** 0.
 
-Esta evidencia confirma la reparación en GitHub Actions. El Pull Request #11
-permanece en Draft y requiere revisión humana; no se realizó merge ni se
-autorizó una etapa posterior. El commit documental que registra esta evidencia
-debe obtener también CI verde antes de presentar el cierre final.
+Esta evidencia confirmó la reparación en GitHub Actions. El Pull Request #11
+fue integrado después de revisión humana. La CI post-merge, run `31991954329`,
+aprobó sobre `e90cddc9edfbaafc52b9da4667703365b663516b`, incluidos E2E multimedia,
+audit y cleanup. La integración no habilitó staging, producción ni una
+capacidad funcional nueva.

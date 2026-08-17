@@ -16,6 +16,12 @@ catálogo y preview privados de Gimnasio. Gym no tiene selección, editor,
 publicación, restauración, onboarding ni resolución pública. Proveedores
 productivos, pagos y tienda no están implementados.
 
+El alcance B1 vigente incorpora también, en orden posterior según la línea
+Alfa/Beta, Flow, Tienda Online, Colegio y las aplicaciones operativas RestApp y
+PosApp. Esta planificación no equivale a disponibilidad actual ni autoriza su
+implementación. Las decisiones rectoras están en el
+[`contrato de producto B1`](docs/contrato-producto-b1.md).
+
 La aplicación ejecutable se encuentra en [`site/`](site/README.md).
 
 Consulta el [índice de documentación](docs/README.md).
@@ -32,3 +38,7 @@ producción ni proveedores productivos.
 La Etapa 10A.5 fue integrada mediante el Pull Request #10. La estabilización
 del E2E multimedia y su cierre técnico se documentan en
 [`docs/etapa-10a6-estabilizacion-ci.md`](docs/etapa-10a6-estabilizacion-ci.md).
+
+La consolidación de alcance y la línea crítica hacia una primera Alfa se
+registran en
+[`docs/etapa-10b0-consolidacion-b1-alfa.md`](docs/etapa-10b0-consolidacion-b1-alfa.md).
