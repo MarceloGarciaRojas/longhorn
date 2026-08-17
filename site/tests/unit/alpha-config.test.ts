@@ -19,8 +19,6 @@ const VALID_ALPHA = {
   CLOUDFLARE_ACCOUNT_ID: "a".repeat(32),
   CLOUDFLARE_HYPERDRIVE_ID: "b".repeat(32),
   CLOUDFLARE_HYPERDRIVE_CACHING: "disabled",
-  DATABASE_ADMIN_URL:
-    "postgresql://postgres:secret@db.example/postgres?sslmode=require",
   DATABASE_MIGRATION_URL:
     "postgresql://nexi_migrator.project:secret@db.example/postgres?sslmode=require",
   DATABASE_URL:
