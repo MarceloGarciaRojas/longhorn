@@ -42,3 +42,9 @@ del E2E multimedia y su cierre técnico se documentan en
 La consolidación de alcance y la línea crítica hacia una primera Alfa se
 registran en
 [`docs/etapa-10b0-consolidacion-b1-alfa.md`](docs/etapa-10b0-consolidacion-b1-alfa.md).
+
+La preparación ejecutable del entorno Alpha, su selección de proveedores y las
+acciones externas pendientes están en
+[`docs/etapa-10b1-entorno-alfa.md`](docs/etapa-10b1-entorno-alfa.md) y el
+[`runbook Alpha`](docs/runbook-alpha.md). El entorno aún no fue aprovisionado ni
+desplegado; multimedia Alpha permanece fail-closed hasta conectar su procesador.

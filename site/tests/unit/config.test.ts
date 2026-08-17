@@ -33,6 +33,25 @@ test("loads an explicit production configuration", () => {
   assert.equal(config.logLevel, "warn");
 });
 
+test("alpha requires an explicit HTTPS URL and deletion grace", () => {
+  assert.throws(
+    () =>
+      loadAppConfig({
+        APP_ENV: "alpha",
+        APP_URL: "http://nexi-alpha.example",
+        SITE_DELETION_GRACE_HOURS: "48",
+      }),
+    AppConfigError,
+  );
+  const config = loadAppConfig({
+    APP_ENV: "alpha",
+    APP_URL: "https://nexi-alpha.example/",
+    SITE_DELETION_GRACE_HOURS: "48",
+  });
+  assert.equal(config.environment, "alpha");
+  assert.equal(config.publicUrl, "https://nexi-alpha.example");
+});
+
 test("rejects a missing production URL without exposing values", () => {
   assert.throws(
     () => loadAppConfig({ APP_ENV: "production" }),

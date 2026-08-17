@@ -5,6 +5,13 @@ import {
   seedOnboardingScenarios,
 } from "./seed";
 
+function assertLocalOrTestCommand(): void {
+  const environment = process.env.APP_ENV?.trim() || "local";
+  if (environment !== "local" && environment !== "test") {
+    throw new Error("Synthetic onboarding is restricted to local or test");
+  }
+}
+
 async function status(): Promise<void> {
   const connectionString = readDatabaseUrl("migration");
   assertSafeResetTarget(connectionString);
@@ -177,6 +184,7 @@ async function resetTest(): Promise<void> {
 
 switch (process.argv[2]) {
   case "seed":
+    assertLocalOrTestCommand();
     await seedOnboardingScenarios();
     console.log("Synthetic onboarding scenarios are ready.");
     break;

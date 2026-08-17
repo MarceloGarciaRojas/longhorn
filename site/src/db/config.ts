@@ -47,13 +47,70 @@ export function readDatabaseUrl(
     if (!url.username) {
       throw new Error("missing database role");
     }
+    if ((source.APP_ENV?.trim() || "local") === "alpha") {
+      assertAlphaDatabaseTarget(purpose, url);
+    }
     return value;
-  } catch {
+  } catch (error) {
+    if (error instanceof DatabaseConfigError) throw error;
     throw new DatabaseConfigError(
       variableName,
       "expected a complete postgres:// or postgresql:// URL",
     );
   }
+}
+
+function roleMatchesPurpose(
+  purpose: DatabaseConnectionPurpose,
+  username: string,
+): boolean {
+  const role = decodeURIComponent(username).split(".")[0];
+  if (purpose === "application") return role === "nexi_app";
+  if (purpose === "migration") return role === "nexi_migrator";
+  return purpose === "admin";
+}
+
+export function assertDatabaseRoleForPurpose(
+  purpose: DatabaseConnectionPurpose,
+  username: string,
+  variableName = VARIABLE_BY_PURPOSE[purpose],
+): void {
+  if (!roleMatchesPurpose(purpose, username)) {
+    throw new DatabaseConfigError(
+      variableName,
+      `alpha requires the restricted ${purpose} database role`,
+    );
+  }
+}
+
+export function assertAlphaDatabaseTarget(
+  purpose: DatabaseConnectionPurpose,
+  url: URL,
+): void {
+  if (purpose === "test") {
+    throw new DatabaseConfigError(
+      "TEST_DATABASE_URL",
+      "test connections are forbidden in alpha",
+    );
+  }
+  const loopback = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+  if (loopback.has(url.hostname)) {
+    throw new DatabaseConfigError(
+      VARIABLE_BY_PURPOSE[purpose],
+      "alpha requires a remote PostgreSQL target",
+    );
+  }
+  if (
+    !["require", "verify-ca", "verify-full"].includes(
+      url.searchParams.get("sslmode") || "",
+    )
+  ) {
+    throw new DatabaseConfigError(
+      VARIABLE_BY_PURPOSE[purpose],
+      "alpha requires sslmode=require, verify-ca or verify-full",
+    );
+  }
+  assertDatabaseRoleForPurpose(purpose, url.username);
 }
 
 export function assertSafeResetTarget(

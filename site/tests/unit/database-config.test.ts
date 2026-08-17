@@ -45,3 +45,37 @@ test("database reset is restricted to local/test databases", () => {
     ),
   );
 });
+
+test("alpha database URLs require TLS, remote hosts and least-privilege roles", () => {
+  const valid =
+    "postgresql://nexi_app.project-ref:secret@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require";
+  assert.equal(
+    readDatabaseUrl("application", { APP_ENV: "alpha", DATABASE_URL: valid }),
+    valid,
+  );
+  assert.throws(
+    () =>
+      readDatabaseUrl("application", {
+        APP_ENV: "alpha",
+        DATABASE_URL: "postgresql://nexi_app:secret@db.example/postgres",
+      }),
+    /sslmode/,
+  );
+  assert.throws(
+    () =>
+      readDatabaseUrl("application", {
+        APP_ENV: "alpha",
+        DATABASE_URL:
+          "postgresql://postgres:secret@db.example/postgres?sslmode=require",
+      }),
+    /restricted application database role/,
+  );
+  assert.throws(
+    () =>
+      readDatabaseUrl("test", {
+        APP_ENV: "alpha",
+        TEST_DATABASE_URL: valid,
+      }),
+    /forbidden in alpha/,
+  );
+});

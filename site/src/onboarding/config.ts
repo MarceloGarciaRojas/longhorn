@@ -1,4 +1,8 @@
-import { APP_ENVIRONMENTS, type AppEnvironment } from "@/src/config/app-config";
+import {
+  APP_ENVIRONMENTS,
+  isDeployedEnvironment,
+  type AppEnvironment,
+} from "@/src/config/app-config";
 
 export interface OnboardingConfig {
   environment: AppEnvironment;
@@ -49,7 +53,7 @@ export function loadOnboardingConfig(
   );
   if (
     requestedPublicForm &&
-    (environment === "staging" || environment === "production")
+    isDeployedEnvironment(environment)
   ) {
     throw new Error(
       "Stage 9A onboarding is restricted to local, development and test",

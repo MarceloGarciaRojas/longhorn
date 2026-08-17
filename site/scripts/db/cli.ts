@@ -19,6 +19,13 @@ const BOOTSTRAP_SQL = fileURLToPath(
   new URL("../../db/bootstrap/0001_local_roles.sql", import.meta.url),
 );
 
+function assertLocalOrTestCommand(): void {
+  const environment = process.env.APP_ENV?.trim() || "local";
+  if (environment !== "local" && environment !== "test") {
+    throw new Error("This synthetic command is restricted to local or test");
+  }
+}
+
 async function withClient<T>(
   connectionString: string,
   applicationName: string,
@@ -39,6 +46,7 @@ async function withClient<T>(
 }
 
 async function bootstrap(): Promise<void> {
+  assertLocalOrTestCommand();
   const connectionString = readDatabaseUrl("admin");
   const sql = await readFile(BOOTSTRAP_SQL, "utf8");
   await withClient(connectionString, "nexi-bootstrap", async (client) => {
@@ -64,6 +72,7 @@ async function status(): Promise<void> {
 }
 
 async function seed(): Promise<void> {
+  assertLocalOrTestCommand();
   await seedSyntheticData(readDatabaseUrl("migration"));
   console.log("Synthetic Tenant A and Tenant B data are ready.");
 }

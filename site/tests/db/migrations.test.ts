@@ -45,6 +45,7 @@ test("versioned migrations create only the approved domain schema", async (t) =>
     "0013",
     "0014",
     "0015",
+    "0016",
   ]);
 
   const secondRun = await applyMigrations(migrationUrl);
@@ -90,6 +91,24 @@ test("versioned migrations create only the approved domain schema", async (t) =>
     schemaKey: "gym.v1",
   }]);
   await pool.query(
+    `INSERT INTO public.media_assets(
+       id,tenant_id,site_id,source_kind,storage_provider,original_filename,
+       display_name,detected_mime_type,byte_size,status,rejection_code,
+       uploaded_by_user_id,upload_idempotency_key
+     ) VALUES(
+       'ab777777-7777-4777-8777-777777777777',$1,$2,'uploaded','supabase',
+       'rollback.webp','Rollback provider','image/webp',1,'failed',
+       'synthetic_rollback',$3,'ab777777-7777-4777-8777-777777777778'
+     )`,
+    [SYNTHETIC_DATA.tenantA.id, SYNTHETIC_DATA.siteA.id, SYNTHETIC_DATA.userA.id],
+  );
+  await expectPgCode(() => rollbackLatestMigration(migrationUrl), "55006");
+  await pool.query(
+    `DELETE FROM public.media_assets
+     WHERE id='ab777777-7777-4777-8777-777777777777'`,
+  );
+  assert.equal(await rollbackLatestMigration(migrationUrl), "0016");
+  await pool.query(
     `INSERT INTO public.sites(id,tenant_id,display_name,slug,status,industry_key)
      VALUES('76555555-5555-4555-8555-555555555555',$1,
        'Gym rollback protegido','gym-rollback-protegido','preparing','gym')`,
@@ -124,7 +143,7 @@ test("versioned migrations create only the approved domain schema", async (t) =>
     0,
   );
   assert.equal(await rollbackLatestMigration(migrationUrl), "0014");
-  assert.deepEqual(await applyMigrations(migrationUrl), ["0014", "0015"]);
+  assert.deepEqual(await applyMigrations(migrationUrl), ["0014", "0015", "0016"]);
   const restaurantStateAfterSecondUp = await pool.query<{
     templateKey: string;
     rendererKey: string;
@@ -174,6 +193,7 @@ test("versioned migrations create only the approved domain schema", async (t) =>
       ["0013", true],
       ["0014", true],
       ["0015", true],
+      ["0016", true],
     ],
   );
 

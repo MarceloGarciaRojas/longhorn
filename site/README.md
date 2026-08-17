@@ -55,8 +55,8 @@ Variables actuales:
 
 | Variable | Obligatoria | Secreta | Uso |
 | --- | --- | --- | --- |
-| `APP_ENV` | No | No | Ambiente lógico: local, test, development, staging o production. |
-| `APP_URL` | En staging/production | No | URL canónica pública. |
+| `APP_ENV` | No | No | Ambiente lógico: local, test, development, alpha, staging o production. |
+| `APP_URL` | En alpha/staging/production | No | URL canónica HTTPS fuera de local/test. |
 | `APP_VERSION` | No | No | Versión mostrada por health. |
 | `APP_COMMIT_SHA` | No | No | Commit desplegado cuando esté disponible. |
 | `LOG_LEVEL` | No | No | Nivel mínimo: debug, info, warn o error. |
@@ -65,16 +65,23 @@ Variables actuales:
 | `DATABASE_URL` | Aplicación server-side | Sí | Rol de aplicación restringido y sujeto a RLS. |
 | `TEST_DATABASE_URL` | Pruebas PostgreSQL | Sí | Rol restringido utilizado por los tests de aislamiento. |
 | `AUTH_PROVIDER` | Sí | No | `supabase`; `test` solo en local/CI. |
-| `AUTH_SECURITY_PEPPER` | Staging/producción | Sí | HMAC de identificadores y cifrado de recovery grants. |
+| `AUTH_SECURITY_PEPPER` | Alpha/staging/producción | Sí | HMAC de identificadores y cifrado de recovery grants. |
 | `AUTH_SESSION_TTL_SECONDS` | No | No | Vigencia máxima de sesión cliente. |
 | `AUTH_ADMIN_SESSION_TTL_SECONDS` | No | No | Vigencia máxima de sesión interna. |
 | `AUTH_INVITATION_TTL_SECONDS` | No | No | Vigencia de una invitación; 24 horas por defecto. |
 | `SUPABASE_URL` | Con Supabase | No | Endpoint server-side de Supabase Auth. |
 | `SUPABASE_PUBLISHABLE_KEY` | Con Supabase | No | Clave publicable usada solo por el adaptador server-side. |
 | `SUPABASE_SECRET_KEY` | Con Supabase | Sí | Acciones administrativas de Auth, solo dentro del adaptador server-side. |
+| `MEDIA_SUPABASE_BUCKET` | En Alpha | No | Bucket privado de objetos multimedia. |
 | `AUTH_TEST_IDENTITIES` | Local/CI | Sí | Identidades sintéticas efímeras. |
 | `AUTH_TEST_RECOVERY_TOKEN` | Local/CI | Sí | Token sintético de recuperación. |
-| `SITE_DELETION_GRACE_HOURS` | Staging/producción | No | Plazo de eliminación: solo `24` o `48`; local/test usa `48`. |
+| `SITE_DELETION_GRACE_HOURS` | Alpha/staging/producción | No | Plazo de eliminación: solo `24` o `48`; local/test usa `48`. |
+| `ALPHA_RESOURCE_GUARD` | Operación Alpha | No | Debe ser exactamente `nexi-alpha`. |
+| `ALPHA_DEPLOY_TARGET` | Operación Alpha | No | Debe ser `cloudflare-workers`. |
+| `CLOUDFLARE_ACCOUNT_ID` | Operación Alpha | No | Cuenta que contiene Worker/Hyperdrive. |
+| `CLOUDFLARE_HYPERDRIVE_ID` | Build Alpha | No | Binding de conexión PostgreSQL runtime. |
+| `CLOUDFLARE_HYPERDRIVE_CACHING` | Alpha | No | Debe ser exactamente `disabled`; el smoke verifica además el recurso real. |
+| `ALPHA_SMOKE_EVIDENCE_FILE` | Smoke post-deploy | No | JSON efímero fuera del repositorio con read-after-write, revocaciones y CPU Workers Free del SHA exacto. |
 
 La configuración se valida de forma centralizada. Los errores identifican la
 variable inválida, pero nunca imprimen su valor.
@@ -114,6 +121,15 @@ variable inválida, pero nunca imprimen su valor.
 | `pnpm db:seed` | Restaura empresas, usuarios, perfiles, planes y sitios completamente ficticios. |
 | `pnpm db:reset` | Revierte y reconstruye únicamente una base local/test. |
 | `pnpm db:check` | Comprueba la conexión del rol `nexi_app`. |
+| `pnpm alpha:preflight` | Valida configuración Alpha sin imprimir secretos ni acceder a red. |
+| `pnpm alpha:db:provision` | Crea/rota roles restringidos mediante credenciales Alpha locales. |
+| `pnpm alpha:db:migrate` | Aplica migraciones versionadas en Alpha; no ejecuta seeds. |
+| `pnpm alpha:db:status` | Informa migraciones Alpha sin usar CI. |
+| `pnpm alpha:db:check` | Comprueba el rol `nexi_app` de Alpha. |
+| `pnpm alpha:build` | Genera el Worker con SHA y bindings Alpha validados. |
+| `pnpm alpha:smoke` | Verifica URL/SHA, caché Hyperdrive deshabilitado, Auth, rol/RLS, consistencia, revocaciones y presupuesto CPU tras un despliegue autorizado. |
+| `pnpm alpha:backup` | Genera un dump custom fuera del repositorio. |
+| `pnpm alpha:backup:verify` | Valida la estructura de un dump sin restaurarlo. |
 | `pnpm security:secrets` | Busca patrones básicos de secretos en archivos de texto. |
 | `pnpm security:audit` | Consulta vulnerabilidades conocidas de dependencias. |
 | `pnpm verify` | Ejecuta lint, tipos, pruebas, build y escaneo de secretos. |

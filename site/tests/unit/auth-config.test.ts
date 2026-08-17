@@ -17,6 +17,42 @@ test("the test identity provider is forbidden outside local and test", () => {
   );
 });
 
+test("alpha requires real identity, a pepper and secure cookies", () => {
+  assert.throws(
+    () =>
+      loadAuthConfig({
+        APP_ENV: "alpha",
+        APP_URL: "https://nexi-alpha.example",
+        AUTH_PROVIDER: "test",
+      }),
+    AuthConfigurationError,
+  );
+  assert.throws(
+    () =>
+      loadAuthConfig({
+        APP_ENV: "alpha",
+        APP_URL: "https://nexi-alpha.example",
+        AUTH_PROVIDER: "supabase",
+        SUPABASE_URL: "https://project.supabase.co",
+        SUPABASE_PUBLISHABLE_KEY: "publishable-value",
+        SUPABASE_SECRET_KEY: "secret-value",
+      }),
+    AuthConfigurationError,
+  );
+  const config = loadAuthConfig({
+    APP_ENV: "alpha",
+    APP_URL: "https://nexi-alpha.example",
+    AUTH_PROVIDER: "supabase",
+    AUTH_SECURITY_PEPPER: "runtime-secret",
+    SUPABASE_URL: "https://project.supabase.co",
+    SUPABASE_PUBLISHABLE_KEY: "publishable-value",
+    SUPABASE_SECRET_KEY: "secret-value",
+  });
+  assert.equal(config.provider, "supabase");
+  assert.equal(config.cookieSecure, true);
+  assert.equal(config.cookieName, "__Host-nexi_session");
+});
+
 test("production Supabase config uses secure host-only cookies", () => {
   const config = loadAuthConfig({
     APP_ENV: "production",
