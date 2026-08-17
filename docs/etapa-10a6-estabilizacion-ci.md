@@ -6,7 +6,8 @@
 - **Base:** `c04a482d0e8aaa5b4f0d0400277e29b812465128`
 - **Rama:** `codex/etapa-10a6-estabilizacion-ci`
 - **Estado local:** CORRECCIÓN VALIDADA
-- **CI de la rama:** PENDIENTE DE PUBLICACIÓN
+- **CI técnica de la rama:** APROBADA
+- **Pull Request:** #11 (Draft)
 
 ## 1. Incidente
 
@@ -147,6 +148,17 @@ restauración, onboarding y resolución pública Gym siguen bloqueados.
 
 ## 9. CI y cierre
 
-El run y resultado de la CI del Pull Request 10A.6 se incorporarán a este
-documento después de publicar el primer commit validado. La etapa no se declara
-cerrada ni autoriza una etapa posterior hasta obtener CI verde en el SHA final.
+El primer commit validado de la corrección,
+`43b06745ba19aa5e096de82c9b13fe4db2400abe`, ejecutó el workflow CI #33:
+
+- **Run:** `31990889702`;
+- **Job:** `Verify application` (`95274134591`);
+- **Resultado:** `SUCCESS`;
+- **E2E multimedia:** `SUCCESS`;
+- **Audit y cleanup:** `SUCCESS`;
+- **Deployments:** 0.
+
+Esta evidencia confirma la reparación en GitHub Actions. El Pull Request #11
+permanece en Draft y requiere revisión humana; no se realizó merge ni se
+autorizó una etapa posterior. El commit documental que registra esta evidencia
+debe obtener también CI verde antes de presentar el cierre final.
