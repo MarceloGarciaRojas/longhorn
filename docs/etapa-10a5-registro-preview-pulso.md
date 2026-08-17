@@ -5,9 +5,11 @@
 - **Etapa:** 10A.5
 - **Fecha de implementación:** 2026-08-12
 - **Fecha de cierre local:** 2026-08-16
-- **Estado:** IMPLEMENTADA Y VALIDADA; LISTA PARA PULL REQUEST DRAFT
+- **Estado:** INTEGRADA EN `main` MEDIANTE PULL REQUEST #10
 - **Base sincronizada:** `f2644923dd950ad5e5a19c8f807077cbae8b302e`
 - **Rama:** `codex/etapa-10a5-registro-preview-pulso`
+- **SHA final aprobado:** `6b49349a2683ea76a476b33fa6d610ad76aa68fe`
+- **Merge commit:** `c04a482d0e8aaa5b4f0d0400277e29b812465128`
 
 ## 1. Objetivo y límite
 
@@ -181,3 +183,18 @@ modifica.
 Pulso Club queda disponible exclusivamente para catálogo y preview privados.
 No constituye disponibilidad comercial de Gimnasio y no autoriza iniciar la
 selección, publicación, restauración, editor u onboarding Gym.
+
+## 10. Correcciones de revisión e incidente posterior al merge
+
+Antes del merge se cerraron dos observaciones de seguridad del Pull Request
+#10. La resolución pública exige ahora capacidad de publicación además de
+compatibilidad de renderer, por lo que una publicación Gym insertada de forma
+operacional continúa fallando cerrada. El preview del Administrador nexi emite
+URLs privadas con audiencia administrativa explícita y los renderers aceptan
+solo su forma exacta.
+
+La CI del SHA aprobado `6b49349a2683ea76a476b33fa6d610ad76aa68fe`
+aprobó. Después del merge, el run `31988199583` sobre `c04a482d...` falló en
+el E2E multimedia con `media service did not start`; todos los pasos anteriores
+habían aprobado. La investigación y corrección del harness pertenecen a la
+Etapa 10A.6 y no alteran las capacidades funcionales descritas en este cierre.
