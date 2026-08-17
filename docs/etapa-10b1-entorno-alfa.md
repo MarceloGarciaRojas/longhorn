@@ -13,7 +13,8 @@ El repositorio ya diferencia `local`, `test/CI` y `alpha`. Alpha falla cerrado
 si intenta usar identidad sintética, HTTP, storage local, credenciales de test,
 roles PostgreSQL incorrectos, conexiones sin TLS o ejecución desde CI.
 
-El stack mínimo seleccionado es Cloudflare Workers Free + Hyperdrive para la
+El stack mínimo seleccionado condicionalmente es Cloudflare Workers Free + una
+única configuración Hyperdrive con query caching deshabilitado para la
 aplicación, y un único proyecto Supabase Free en São Paulo para PostgreSQL,
 Auth y el bucket privado de objetos. Esta composición preserva PostgreSQL, el
 adaptador de identidad, las sesiones opacas, RLS y la abstracción multimedia.
@@ -48,6 +49,7 @@ Fuentes oficiales consultadas:
 - [Cloudflare Workers: límites](https://developers.cloudflare.com/workers/platform/limits/)
 - [Cloudflare Workers: precios](https://developers.cloudflare.com/workers/platform/pricing/)
 - [Cloudflare Hyperdrive: precios](https://developers.cloudflare.com/hyperdrive/platform/pricing/)
+- [Cloudflare Hyperdrive: query caching](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/)
 - [Cloudflare Hyperdrive con PostgreSQL/pg](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/)
 - [Cloudflare Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/)
 - [Cloudflare R2: precios](https://developers.cloudflare.com/r2/pricing/)
@@ -105,7 +107,9 @@ privado y las rutas de objeto mantienen el prefijo
   `nexi_migrator`.
 - bootstrap y seeds sintéticos quedaron bloqueados fuera de local/test.
 - se agregaron preflight, provisionamiento de roles, migración/status/check,
-  build, smoke, backup y verificación de archivo.
+  build, smoke, backup y verificación de archivo; preflight exige la declaración
+  de caché deshabilitado y el smoke comprueba el recurso real y evidencia E2E
+  de consistencia, revocación y CPU del SHA exacto.
 - el build declara observabilidad Cloudflare, Hyperdrive, variables no
   secretas y nombres de secretos requeridos; no materializa secretos.
 
@@ -136,7 +140,7 @@ solo para el puesto operador; no se despliegan al Worker.
   `alpha:backup` genera `pg_dump` custom fuera del repositorio y
   `alpha:backup:verify` valida su estructura. Antes del piloto debe ensayarse
   restauración en una base aislada.
-- Workers Logs conserva hasta siete días; suficiente para Alfa, no para una
+- Workers Logs conserva hasta tres días en Free; suficiente para Alfa, no para una
   auditoría regulatoria o producción.
 
 ## 8. Límites preservados
@@ -155,14 +159,14 @@ Docker. El resultado fue:
 | Comprobación | Resultado |
 | --- | --- |
 | `pnpm install --frozen-lockfile` | Aprobada; lockfile y patches sin cambios. |
-| `pnpm verify` | Aprobada; 90 pruebas, 0 fallas, 0 errores lint y 6 advertencias heredadas `no-img-element`. |
+| `pnpm verify` | Aprobada; 93 pruebas, 0 fallas, 0 errores lint y 6 advertencias heredadas `no-img-element`. |
 | Migraciones + RLS | 8/8; incluye UP/DOWN fail-closed de 0016. |
 | Auth / Admin / Client / Operations | 19/19, 14/14, 12/12 y 8/8. |
 | Content / Media seed / Media / Templates / Onboarding | 38/38, 5/5, 12/12, 13/13 y 5/5. |
 | E2E HTTP | 11/11 en siete suites; cada una con reset canónico. |
-| `alpha:preflight` + `alpha:build` | Aprobados con configuración ficticia completa y SHA de 40 caracteres. |
+| `alpha:preflight` + `alpha:build` | Aprobados con configuración ficticia completa, caché declarado `disabled` y SHA de 40 caracteres. |
 | Audit | Critical 0, High 0, Moderate 0, Low 0. |
-| Secretos / Markdown / archivos grandes | 319 archivos escaneados, enlaces locales válidos y sin archivos nuevos mayores a 5 MiB. |
+| Secretos / Markdown / archivos grandes | 321 archivos escaneados, enlaces locales válidos y sin archivos nuevos mayores a 5 MiB. |
 | `git diff --check` | Aprobado. |
 
 Los valores ficticios usados en preflight/build no se guardaron en archivos.
@@ -179,8 +183,13 @@ No hubo conexiones a recursos Alpha ni despliegue.
    proyecto Free.
 4. **Medio — SMTP:** el servidor por defecto solo sirve la cuenta controlada;
    Resend/dominio debe quedar operativo antes de invitar personas externas.
-5. **Medio — límites Worker:** 10 ms CPU por request y 100.000 requests/día
-   requieren smoke y observación; no se procesan imágenes dentro del Worker.
+5. **Alto — runtime Worker condicionado:** 10 ms CPU por request y 100.000
+   requests/día requieren un smoke real del recorrido Restaurant. Cualquier
+   `exceededCpu`, error 1102 o throttling bloquea Alfa y obliga a reevaluar el
+   runtime sin cambiar persistencia, identidad, RLS, Storage ni dominio.
+6. **Alto — consistencia Hyperdrive:** el caché de consultas debe permanecer
+   deshabilitado; la evidencia real debe demostrar read-after-write y rechazo
+   inmediato de sesión/permisos revocados.
 
 ## 11. Siguiente incremento único
 

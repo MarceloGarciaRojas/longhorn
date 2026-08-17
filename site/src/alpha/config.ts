@@ -33,6 +33,7 @@ export interface AlphaConfig {
   deployTarget: "cloudflare-workers";
   cloudflareAccountId: string;
   hyperdriveId: string;
+  hyperdriveCaching: "disabled";
   mediaBucket: string;
   databaseAdminUrl: string;
   databaseMigrationUrl: string;
@@ -85,6 +86,7 @@ export function loadAlphaConfig(
 
   const cloudflareAccountId = required(source, "CLOUDFLARE_ACCOUNT_ID");
   const hyperdriveId = required(source, "CLOUDFLARE_HYPERDRIVE_ID");
+  exact(source, "CLOUDFLARE_HYPERDRIVE_CACHING", "disabled");
   if (!/^[0-9a-f]{32}$/i.test(cloudflareAccountId)) {
     throw new AlphaConfigurationError(
       "CLOUDFLARE_ACCOUNT_ID",
@@ -111,6 +113,7 @@ export function loadAlphaConfig(
     deployTarget: "cloudflare-workers",
     cloudflareAccountId,
     hyperdriveId,
+    hyperdriveCaching: "disabled",
     mediaBucket,
     databaseAdminUrl: readDatabaseUrl("admin", source),
     databaseMigrationUrl: readDatabaseUrl("migration", source),

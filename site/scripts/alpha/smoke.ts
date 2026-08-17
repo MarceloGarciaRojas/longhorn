@@ -1,7 +1,39 @@
+import { readFile } from "node:fs/promises";
+import { isAbsolute, relative, sep } from "node:path";
+
 import { loadAlphaConfig } from "../../src/alpha/config";
+import { validateAlphaSmokeEvidence } from "../../src/alpha/smoke-evidence";
 import { createDatabasePool } from "../../src/db/pool";
 
 const config = loadAlphaConfig();
+const commitSha = process.env.APP_COMMIT_SHA?.trim() || "";
+if (!/^[0-9a-f]{40}$/i.test(commitSha)) {
+  throw new Error("APP_COMMIT_SHA must be the exact deployed 40-character SHA");
+}
+const cloudflareToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
+if (!cloudflareToken) throw new Error("CLOUDFLARE_API_TOKEN is required for Alpha smoke");
+
+const hyperdriveResponse = await fetch(
+  `https://api.cloudflare.com/client/v4/accounts/${config.cloudflareAccountId}/hyperdrive/configs/${config.hyperdriveId}`,
+  {
+    headers: {
+      authorization: `Bearer ${cloudflareToken}`,
+      "user-agent": "nexi-alpha-smoke/1",
+    },
+    signal: AbortSignal.timeout(10_000),
+  },
+);
+if (!hyperdriveResponse.ok) {
+  throw new Error(`Hyperdrive configuration returned HTTP ${hyperdriveResponse.status}`);
+}
+const hyperdrive = (await hyperdriveResponse.json()) as {
+  success?: boolean;
+  result?: { caching?: { disabled?: boolean } };
+};
+if (hyperdrive.success !== true || hyperdrive.result?.caching?.disabled !== true) {
+  throw new Error("Hyperdrive query caching must be disabled for Alpha");
+}
+
 const response = await fetch(new URL("/api/health", `${config.publicUrl}/`), {
   headers: { "user-agent": "nexi-alpha-smoke/1" },
   signal: AbortSignal.timeout(10_000),
@@ -17,7 +49,7 @@ if (
   health.status !== "ok" ||
   health.application !== "nexi" ||
   health.environment !== "alpha" ||
-  health.commit !== process.env.APP_COMMIT_SHA?.trim()
+  health.commit !== commitSha
 ) {
   throw new Error("Alpha health metadata does not match the approved artifact");
 }
@@ -73,5 +105,23 @@ const authResponse = await fetch(`${process.env.SUPABASE_URL}/auth/v1/health`, {
 if (!authResponse.ok) {
   throw new Error(`Supabase Auth health returned HTTP ${authResponse.status}`);
 }
-console.log("Alpha smoke approved: URL, exact artifact, Auth, role and RLS.");
+
+const evidenceFile = process.env.ALPHA_SMOKE_EVIDENCE_FILE?.trim();
+if (!evidenceFile || !isAbsolute(evidenceFile)) {
+  throw new Error("ALPHA_SMOKE_EVIDENCE_FILE must be an absolute path outside the repository");
+}
+const repositoryRelative = relative(process.cwd(), evidenceFile);
+if (
+  repositoryRelative === "" ||
+  (!repositoryRelative.startsWith(`..${sep}`) &&
+    repositoryRelative !== ".." &&
+    !isAbsolute(repositoryRelative))
+) {
+  throw new Error("ALPHA_SMOKE_EVIDENCE_FILE must remain outside the repository");
+}
+const evidence = JSON.parse(await readFile(evidenceFile, "utf8")) as unknown;
+validateAlphaSmokeEvidence(evidence, commitSha);
+
+console.log("Alpha smoke approved: uncached Hyperdrive, exact artifact, Auth, role and RLS.");
+console.log("Restaurant E2E approved: read-after-write, revocations and Workers Free CPU.");
 console.log("Storage write/read/delete verification remains a provisioning gate.");

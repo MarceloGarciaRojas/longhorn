@@ -30,6 +30,9 @@ const runtimeBindingConfig = {
         APP_URL: requiredAlphaValue("APP_URL"),
         APP_VERSION: process.env.APP_VERSION?.trim() || "0.1.0",
         APP_COMMIT_SHA: requiredAlphaValue("APP_COMMIT_SHA"),
+        CLOUDFLARE_HYPERDRIVE_CACHING: requiredAlphaValue(
+          "CLOUDFLARE_HYPERDRIVE_CACHING",
+        ),
         LOG_LEVEL: process.env.LOG_LEVEL?.trim() || "info",
         SITE_DELETION_GRACE_HOURS: "48",
         AUTH_PROVIDER: "supabase",

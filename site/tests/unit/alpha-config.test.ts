@@ -18,6 +18,7 @@ const VALID_ALPHA = {
   MEDIA_SUPABASE_BUCKET: "nexi-alpha-media",
   CLOUDFLARE_ACCOUNT_ID: "a".repeat(32),
   CLOUDFLARE_HYPERDRIVE_ID: "b".repeat(32),
+  CLOUDFLARE_HYPERDRIVE_CACHING: "disabled",
   DATABASE_ADMIN_URL:
     "postgresql://postgres:secret@db.example/postgres?sslmode=require",
   DATABASE_MIGRATION_URL:
@@ -30,6 +31,7 @@ test("alpha preflight accepts only the explicit persistent stack", () => {
   const config = loadAlphaConfig(VALID_ALPHA);
   assert.equal(config.environment, "alpha");
   assert.equal(config.mediaBucket, "nexi-alpha-media");
+  assert.equal(config.hyperdriveCaching, "disabled");
 });
 
 test("alpha preflight cannot run from CI or with test credentials", () => {
@@ -56,5 +58,17 @@ test("alpha preflight rejects weak or mixed provider configuration", () => {
   assert.throws(
     () => loadAlphaConfig({ ...VALID_ALPHA, MEDIA_STORAGE_PROVIDER: "local" }),
     /forbidden/,
+  );
+  assert.throws(
+    () => loadAlphaConfig({ ...VALID_ALPHA, CLOUDFLARE_HYPERDRIVE_CACHING: "enabled" }),
+    /expected disabled/,
+  );
+  assert.throws(
+    () =>
+      loadAlphaConfig({
+        ...VALID_ALPHA,
+        CLOUDFLARE_HYPERDRIVE_CACHING: undefined,
+      }),
+    /it is required/,
   );
 });

@@ -8,6 +8,7 @@ try {
   console.log(`Public URL: ${config.publicUrl}`);
   console.log("Identity: Supabase (server-side adapter)");
   console.log("Database: PostgreSQL (restricted roles + Hyperdrive)");
+  console.log(`Hyperdrive query caching: ${config.hyperdriveCaching} (required)`);
   console.log("Media objects: private Supabase Storage bucket");
   console.log("Secrets: present in the process and not printed");
 } catch (error) {

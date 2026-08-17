@@ -19,14 +19,23 @@ PostgreSQL/Auth y sus límites cubren la prueba controlada.
 
 ## Decisión
 
-1. La aplicación Alfa se ejecutará en Cloudflare Workers Free con URL
-   `workers.dev`, observabilidad Workers Logs y Hyperdrive Free.
+1. La aplicación Alfa se ejecutará inicialmente en Cloudflare Workers Free con
+   URL `workers.dev`, observabilidad Workers Logs y Hyperdrive Free. Esta
+   selección queda condicionada al smoke real del primer deployment: las rutas
+   Restaurant de autenticación, panel, edición, preview, publicación y
+   resolución pública deben operar sin exceder el límite efectivo de CPU del
+   plan Free ni presentar throttling. Si falla, se reevaluará únicamente el
+   adaptador/runtime, sin cambiar PostgreSQL, RLS, Supabase Auth, Storage ni los
+   contratos del dominio.
 2. Un proyecto Supabase Free en São Paulo proveerá PostgreSQL y Auth detrás de
    los adaptadores existentes.
 3. Ese mismo proyecto proveerá un bucket privado Supabase Storage para objetos
    Alfa mediante `ObjectStorage`; la aplicación seguirá autorizando cada
    lectura y nunca expondrá la secret key.
-4. El runtime web utilizará exclusivamente `nexi_app` a través de Hyperdrive.
+4. El runtime web utilizará exclusivamente `nexi_app` a través de una única
+   configuración Hyperdrive con query caching completamente deshabilitado
+   (`--caching-disabled`). Alpha prioriza read-after-write y revocación de
+   sesiones/permisos; no se creará un segundo Hyperdrive cacheado.
    Aprovisionamiento y migraciones usarán credenciales separadas que no se
    despliegan.
 5. `local/test` conservan identidad sintética, PostgreSQL efímero y storage
@@ -53,6 +62,10 @@ PostgreSQL/Auth y sus límites cubren la prueba controlada.
 
 - La Alfa puede mantenerse en USD 0 dentro de cuotas, con riesgo de pausa y
   restricción por límites.
+- Workers Free es un runtime Alfa condicionado, no una aceptación definitiva:
+  el go/no-go exige evidencia real de CPU, outcome y throttling del SHA exacto.
+- Deshabilitar el caché de Hyperdrive sacrifica optimización de lectura para
+  evitar lecturas obsoletas después de escrituras o revocaciones sensibles.
 - El lock-in queda acotado a adaptadores HTTP/Hyperdrive; datos PostgreSQL y
   claves de objeto siguen exportables.
 - La secret key de Supabase tiene alto privilegio sobre Storage y debe

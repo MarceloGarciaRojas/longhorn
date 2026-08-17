@@ -44,22 +44,30 @@ Crear además un bucket privado `nexi-alpha-media`, límite 10 MB y MIME
 4. **Nombre recomendado:** Worker `nexi-alpha`.
 5. **Región:** red global; PostgreSQL permanece en São Paulo.
 6. **Plan:** Workers Free + Hyperdrive Free.
-7. **Activar:** Workers Logs y una configuración Hyperdrive hacia el pooler
-   Supabase con el rol `nexi_app`.
+7. **Activar:** Workers Logs y una única configuración Hyperdrive hacia el
+   pooler Supabase con el rol `nexi_app`, creada o actualizada con query caching
+   deshabilitado. La operación debe equivaler a
+   `wrangler hyperdrive create ... --caching-disabled` o
+   `wrangler hyperdrive update <ID> --caching-disabled`. No crear un segundo
+   Hyperdrive cacheado.
 8. **Desactivar:** Workers Paid, R2, Analytics pagado, dominio comercial y
    productos con billing.
 9. **Tarjeta:** no. Si el dashboard la exige, detenerse.
 10. **Recuperar:** Account ID, Hyperdrive ID y URL `workers.dev`; autenticar
     Wrangler por OAuth local o token de alcance mínimo.
 11. **Variables:** `CLOUDFLARE_ACCOUNT_ID`,
-    `CLOUDFLARE_HYPERDRIVE_ID`, `APP_URL`; un token, si se usa, queda solo en
-    `CLOUDFLARE_API_TOKEN` local.
+    `CLOUDFLARE_HYPERDRIVE_ID`,
+    `CLOUDFLARE_HYPERDRIVE_CACHING=disabled`, `APP_URL`; el token de alcance
+    mínimo usado por el smoke queda solo en `CLOUDFLARE_API_TOKEN` local.
 12. **Entrega segura:** iniciar sesión mediante `wrangler login` o guardar el
     token únicamente en `site/.env.alpha`; nunca pegarlo en chat.
 13. **No compartir:** API token, secretos del Worker o connection string de
     Hyperdrive.
-14. **Confirmación:** dashboard indica Free, Worker sin deployment previo,
-    Hyperdrive asociado al rol restringido y ningún producto facturable.
+14. **Confirmación:** dashboard/API indica Free, Worker sin deployment previo,
+    Hyperdrive asociado al rol restringido, `caching.disabled=true` y ningún
+    producto facturable. `alpha:preflight` rechaza cualquier declaración
+    distinta de `disabled`; `alpha:smoke` comprueba el estado real mediante la
+    API de Cloudflare.
 
 ### Acción 3 — Correo de recuperación controlado
 
@@ -93,6 +101,8 @@ APP_ENV=alpha
 ALPHA_RESOURCE_GUARD=nexi-alpha
 ALPHA_DEPLOY_TARGET=cloudflare-workers
 APP_COMMIT_SHA=<SHA exacto aprobado>
+CLOUDFLARE_HYPERDRIVE_CACHING=disabled
+ALPHA_SMOKE_EVIDENCE_FILE=<ruta absoluta fuera del repositorio>
 ALPHA_APP_DB_PASSWORD=<secreto aleatorio de 32+ caracteres>
 ALPHA_MIGRATOR_DB_PASSWORD=<secreto distinto de 32+ caracteres>
 ALPHA_BACKUP_DIRECTORY=<ruta absoluta fuera del repositorio>
@@ -131,18 +141,37 @@ pnpm alpha:smoke
 pnpm alpha:backup
 ```
 
+`ALPHA_SMOKE_EVIDENCE_FILE` debe apuntar a un JSON efímero fuera del
+repositorio, capturado contra el SHA exacto mediante el recorrido E2E real y
+Workers Logs. Debe contener las seis rutas `authentication`, `client-panel`,
+`content-edit`, `preview`, `publication` y `public-resolution`, con HTTP
+correcto, `outcome=ok`, `throttled=false` y CPU no superior al límite Free
+vigente de 10 ms. Debe acreditar además: lectura inmediata del contenido recién
+escrito, rechazo de una sesión revocada y rechazo de permisos revocados. El
+script falla cerrado ante ruta ausente, SHA distinto, lectura obsoleta,
+revocación inefectiva, `exceededCpu`, throttling o CPU superior al límite. El
+archivo es evidencia operacional temporal y no se versiona.
+
 Para validar el archivo, definir `ALPHA_BACKUP_FILE` con la ruta generada y
 ejecutar `pnpm alpha:backup:verify`.
 
 ## 4. Go/no-go
 
 Go solo si preflight, migraciones, rol/RLS, SHA/health, Supabase Auth, objeto de
-prueba write/read/delete, backup y restauración aislada aprueban. Deben existir
-cero secretos en Git y cero acceso CI a Alpha.
+prueba write/read/delete, backup y restauración aislada aprueban. Hyperdrive
+debe reportar caching deshabilitado. El primer deployment debe demostrar con
+tráfico real que autenticación, panel, edición, preview, publicación y
+resolución pública Restaurant respetan read-after-write, rechazan sesiones y
+permisos revocados, no exceden 10 ms CPU por request y no presentan outcome
+`exceededCpu`, error 1102 ni throttling. Deben existir cero secretos en Git y
+cero acceso CI a Alpha.
 
-No-go ante tarjeta, plan no Free, role superuser/bypass RLS, HTTP, storage
-público, SMTP abierto, error de migración, mismatch de SHA o procesamiento de
-medios no conectado.
+No-go ante tarjeta, plan no Free, role superuser/bypass RLS, caché Hyperdrive
+activo o no verificable, lectura obsoleta, revocación inefectiva, HTTP, storage
+público, SMTP abierto, error de migración, mismatch de SHA, CPU/throttling fuera
+del presupuesto Free o procesamiento de medios no conectado. Si Workers Free
+falla esta puerta, reevaluar el runtime sin sustituir PostgreSQL, RLS, Supabase
+Auth, Storage ni contratos de dominio.
 
 ## 5. Rollback y recuperación
 

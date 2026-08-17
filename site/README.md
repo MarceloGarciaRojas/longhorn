@@ -80,6 +80,8 @@ Variables actuales:
 | `ALPHA_DEPLOY_TARGET` | Operación Alpha | No | Debe ser `cloudflare-workers`. |
 | `CLOUDFLARE_ACCOUNT_ID` | Operación Alpha | No | Cuenta que contiene Worker/Hyperdrive. |
 | `CLOUDFLARE_HYPERDRIVE_ID` | Build Alpha | No | Binding de conexión PostgreSQL runtime. |
+| `CLOUDFLARE_HYPERDRIVE_CACHING` | Alpha | No | Debe ser exactamente `disabled`; el smoke verifica además el recurso real. |
+| `ALPHA_SMOKE_EVIDENCE_FILE` | Smoke post-deploy | No | JSON efímero fuera del repositorio con read-after-write, revocaciones y CPU Workers Free del SHA exacto. |
 
 La configuración se valida de forma centralizada. Los errores identifican la
 variable inválida, pero nunca imprimen su valor.
@@ -125,7 +127,7 @@ variable inválida, pero nunca imprimen su valor.
 | `pnpm alpha:db:status` | Informa migraciones Alpha sin usar CI. |
 | `pnpm alpha:db:check` | Comprueba el rol `nexi_app` de Alpha. |
 | `pnpm alpha:build` | Genera el Worker con SHA y bindings Alpha validados. |
-| `pnpm alpha:smoke` | Verifica URL/SHA, Auth, rol y RLS tras un despliegue autorizado. |
+| `pnpm alpha:smoke` | Verifica URL/SHA, caché Hyperdrive deshabilitado, Auth, rol/RLS, consistencia, revocaciones y presupuesto CPU tras un despliegue autorizado. |
 | `pnpm alpha:backup` | Genera un dump custom fuera del repositorio. |
 | `pnpm alpha:backup:verify` | Valida la estructura de un dump sin restaurarlo. |
 | `pnpm security:secrets` | Busca patrones básicos de secretos en archivos de texto. |
