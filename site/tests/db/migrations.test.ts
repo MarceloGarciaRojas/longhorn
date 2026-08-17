@@ -44,6 +44,7 @@ test("versioned migrations create only the approved domain schema", async (t) =>
     "0012",
     "0013",
     "0014",
+    "0015",
   ]);
 
   const secondRun = await applyMigrations(migrationUrl);
@@ -72,8 +73,58 @@ test("versioned migrations create only the approved domain schema", async (t) =>
        AND version.status='active'
      ORDER BY template.key,version.version`,
   );
+  const gymStateBeforeRollback = await pool.query<{
+    templateKey: string;
+    rendererKey: string;
+    schemaKey: string;
+  }>(
+    `SELECT template.key AS "templateKey",version.renderer_key AS "rendererKey",
+       version.content_schema_key AS "schemaKey"
+     FROM public.templates template
+     JOIN public.template_versions version ON version.template_id=template.id
+     WHERE template.industry_key='gym'`,
+  );
+  assert.deepEqual(gymStateBeforeRollback.rows, [{
+    templateKey: "gym-pulso",
+    rendererKey: "gym-pulso-v1",
+    schemaKey: "gym.v1",
+  }]);
+  await pool.query(
+    `INSERT INTO public.sites(id,tenant_id,display_name,slug,status,industry_key)
+     VALUES('76555555-5555-4555-8555-555555555555',$1,
+       'Gym rollback protegido','gym-rollback-protegido','preparing','gym')`,
+    [SYNTHETIC_DATA.tenantB.id],
+  );
+  await pool.query(
+    `INSERT INTO public.site_template_assignments(
+       id,tenant_id,site_id,template_version_id,schema_key,schema_version,
+       assigned_by_user_id,idempotency_key
+     ) VALUES(
+       'ab666666-6666-4666-8666-666666666666',$1,
+       '76555555-5555-4555-8555-555555555555',
+       'a8cccccc-cccc-4ccc-8ccc-cccccccccccc','gym.v1',1,$2,
+       'ab666666-6666-4666-8666-666666666667'
+     )`,
+    [SYNTHETIC_DATA.tenantB.id, SYNTHETIC_DATA.userAdmin.id],
+  );
+  await expectPgCode(() => rollbackLatestMigration(migrationUrl), "55006");
+  await pool.query(
+    `DELETE FROM public.site_template_assignments
+     WHERE id='ab666666-6666-4666-8666-666666666666'`,
+  );
+  await pool.query(
+    `DELETE FROM public.sites
+     WHERE id='76555555-5555-4555-8555-555555555555'`,
+  );
+  assert.equal(await rollbackLatestMigration(migrationUrl), "0015");
+  assert.equal(
+    (await pool.query(
+      `SELECT count(*)::int AS count FROM public.templates WHERE industry_key='gym'`,
+    )).rows[0].count,
+    0,
+  );
   assert.equal(await rollbackLatestMigration(migrationUrl), "0014");
-  assert.deepEqual(await applyMigrations(migrationUrl), ["0014"]);
+  assert.deepEqual(await applyMigrations(migrationUrl), ["0014", "0015"]);
   const restaurantStateAfterSecondUp = await pool.query<{
     templateKey: string;
     rendererKey: string;
@@ -91,6 +142,18 @@ test("versioned migrations create only the approved domain schema", async (t) =>
     restaurantStateAfterSecondUp.rows,
     restaurantStateBeforeRollback.rows,
   );
+  const gymStateAfterSecondUp = await pool.query<{
+    templateKey: string;
+    rendererKey: string;
+    schemaKey: string;
+  }>(
+    `SELECT template.key AS "templateKey",version.renderer_key AS "rendererKey",
+       version.content_schema_key AS "schemaKey"
+     FROM public.templates template
+     JOIN public.template_versions version ON version.template_id=template.id
+     WHERE template.industry_key='gym'`,
+  );
+  assert.deepEqual(gymStateAfterSecondUp.rows, gymStateBeforeRollback.rows);
 
   const status = await getMigrationStatus(migrationUrl);
   assert.deepEqual(
@@ -110,6 +173,7 @@ test("versioned migrations create only the approved domain schema", async (t) =>
       ["0012", true],
       ["0013", true],
       ["0014", true],
+      ["0015", true],
     ],
   );
 
@@ -384,14 +448,14 @@ test("versioned migrations create only the approved domain schema", async (t) =>
       `INSERT INTO public.templates(
          id,key,display_name,industry_key,status,description
        ) VALUES(
-         'a8bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','gym-test-fixture',
+         'a8dddddd-dddd-4ddd-8ddd-dddddddddddd','gym-test-fixture',
          'Gym fixture','gym','draft','Fixture sin schema, renderer ni versión funcional'
        )`,
     );
     const gymTemplates = await client.query<{ count: number }>(
       `SELECT count(*)::int AS count FROM public.templates WHERE industry_key='gym'`,
     );
-    assert.equal(gymTemplates.rows[0].count, 1);
+    assert.equal(gymTemplates.rows[0].count, 2);
 
     await client.query("SAVEPOINT unknown_template_industry");
     await expectPgCode(

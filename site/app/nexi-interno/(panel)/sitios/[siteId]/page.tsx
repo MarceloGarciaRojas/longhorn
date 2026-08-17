@@ -7,7 +7,10 @@ import {
   adminTemplateAssignment,
   adminTemplateOptions,
 } from "@/src/content/service.server";
-import { templateSelectionIsAllowed } from "@/src/content/template-capabilities";
+import {
+  templatePreviewIsAllowed,
+  templateSelectionIsAllowed,
+} from "@/src/content/template-capabilities";
 import { randomUUID } from "node:crypto";
 import {
   adminSite,
@@ -45,6 +48,9 @@ export default async function AdminSitePage({
     : templateOptions;
   const assignableTemplateOptions = compatibleTemplateOptions.filter(
     templateSelectionIsAllowed,
+  );
+  const previewableTemplateOptions = compatibleTemplateOptions.filter(
+    templatePreviewIsAllowed,
   );
   return (
     <main className="admin-content">
@@ -110,9 +116,9 @@ export default async function AdminSitePage({
             </OperationSubmit>
           </form>
         ) : null}
-        {contentDraft && compatibleTemplateOptions.length > 0 ? (
+        {contentDraft && previewableTemplateOptions.length > 0 ? (
           <div className="content-editor-actions">
-            {compatibleTemplateOptions.map((option) => (
+            {previewableTemplateOptions.map((option) => (
               <div key={option.id}>
                 <Link
                   className="admin-button secondary"

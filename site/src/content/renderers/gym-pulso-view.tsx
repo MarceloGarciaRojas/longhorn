@@ -107,11 +107,13 @@ function resolvedMedia(
   if (!usage) return null;
   const resolved = media[usage.assetId]?.[variant];
   const privatePath = `/api/media/private/${usage.assetId}/${variant}`;
+  const adminPrivatePath = `${privatePath}?audience=admin`;
   const publicPrefix = `/media/${usage.assetId}/${variant}/`;
   const publicChecksum = resolved?.url.startsWith(publicPrefix)
     ? resolved.url.slice(publicPrefix.length)
     : "";
   const safePath = resolved?.url === privatePath ||
+    resolved?.url === adminPrivatePath ||
     /^[0-9a-f]{64}$/.test(publicChecksum);
   if (
     !resolved ||

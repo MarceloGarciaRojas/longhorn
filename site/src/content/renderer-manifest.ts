@@ -1,4 +1,7 @@
 import {
+  GYM_PULSO_RENDERER_KEY,
+  GYM_SCHEMA_KEY,
+  GYM_SCHEMA_VERSION,
   RESTAURANT_CLASSIC_V2_RENDERER_KEY,
   RESTAURANT_EDITORIAL_RENDERER_KEY,
   RESTAURANT_MODERN_RENDERER_KEY,
@@ -10,6 +13,7 @@ import {
   type RegisteredContentSchemaKey,
 } from "./types";
 import {
+  GYM_INDUSTRY_KEY,
   isIndustryKey,
   RESTAURANT_INDUSTRY_KEY,
   type IndustryKey,
@@ -50,6 +54,12 @@ export function createRendererManifest(
 }
 
 const RENDERER_MANIFEST = createRendererManifest([
+  [GYM_PULSO_RENDERER_KEY, {
+    industryKey: GYM_INDUSTRY_KEY,
+    schemaKey: GYM_SCHEMA_KEY,
+    minimumSchemaVersion: GYM_SCHEMA_VERSION,
+    maximumSchemaVersion: GYM_SCHEMA_VERSION,
+  }],
   [RESTAURANT_RENDERER_KEY, {
     industryKey: RESTAURANT_INDUSTRY_KEY,
     schemaKey: RESTAURANT_SCHEMA_KEY,

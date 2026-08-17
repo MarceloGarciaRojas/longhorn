@@ -17,7 +17,9 @@ import { normalizeHostname } from "@/src/tenancy/public-host";
 import { rendererIsCompatible } from "./renderer-manifest";
 import {
   rendererPublicationIsAllowed,
+  rendererPublicResolutionIsAllowed,
   templateCatalogOrder,
+  templatePreviewIsAllowed,
   templateSelectionIsAllowed,
 } from "./template-capabilities";
 import {
@@ -542,7 +544,7 @@ export async function clientCompatibleTemplates(
     );
     const current = context.rows[0];
     if (!current) return null;
-    if (!current.templateVersionId || !current.schemaKey || !current.schemaVersion) {
+    if (!current.schemaKey || !current.schemaVersion) {
       return { currentTemplateVersionId: null, options: [] };
     }
     const schemaKey = current.schemaKey;
@@ -569,14 +571,7 @@ export async function clientCompatibleTemplates(
     return {
       currentTemplateVersionId: current.templateVersionId,
       options: result.rows
-        .filter((option) =>
-          rendererIsCompatible(
-            option.rendererKey,
-            current.industryKey,
-            schemaKey,
-            schemaVersion,
-          ),
-        )
+        .filter(templatePreviewIsAllowed)
         .sort(templateCatalogOrder),
     };
   });
@@ -598,7 +593,7 @@ export async function clientPreviewAlternativeTemplate(
   return withClientOperation(session, pageId("template-preview"), async (client) => {
     const catalog = await clientCompatibleTemplatesInTransaction(client, siteId);
     const option = catalog?.options.find((item) => item.id === templateVersionId);
-    if (!catalog || !option) return null;
+    if (!catalog || !option || !templatePreviewIsAllowed(option)) return null;
     const draft = await client.query<ContentDraft>(
       `SELECT id,site_id AS "siteId",schema_key AS "schemaKey",
          schema_version AS "schemaVersion",content,revision,
@@ -699,12 +694,7 @@ export async function adminPreviewAlternativeTemplate(
       ],
     );
     const selected = option.rows[0];
-    if (!selected || !rendererIsCompatible(
-      selected.rendererKey,
-      current.industryKey,
-      current.draft.schemaKey,
-      current.draft.schemaVersion,
-    )) {
+    if (!selected || !templatePreviewIsAllowed(selected)) {
       return null;
     }
     validateContentForSchema(
@@ -718,6 +708,7 @@ export async function adminPreviewAlternativeTemplate(
       client,
       { draftId: current.draft.id },
       "private",
+      "nexi_admin",
     );
     await mediaAudit(client, {
       tenantId: current.tenantId,
@@ -753,12 +744,10 @@ async function clientCompatibleTemplatesInTransaction(
     [siteId],
   );
   if (!current.rows[0]) return null;
-  if (!current.rows[0].templateVersionId || !current.rows[0].schemaKey ||
-      !current.rows[0].schemaVersion) {
+  if (!current.rows[0].schemaKey || !current.rows[0].schemaVersion) {
     return { currentTemplateVersionId: null, options: [] };
   }
   const currentRow = current.rows[0] as typeof current.rows[number] & {
-    templateVersionId: string;
     schemaKey: string;
     schemaVersion: number;
   };
@@ -786,14 +775,7 @@ async function clientCompatibleTemplatesInTransaction(
   return {
     currentTemplateVersionId: currentRow.templateVersionId,
     options: options.rows
-      .filter((option) =>
-        rendererIsCompatible(
-          option.rendererKey,
-          currentRow.industryKey,
-          currentRow.schemaKey,
-          currentRow.schemaVersion,
-        ),
-      )
+      .filter(templatePreviewIsAllowed)
       .sort(templateCatalogOrder),
   };
 }
@@ -1550,7 +1532,7 @@ export async function resolvePublicSite(input: {
           "publication",
         );
         if (!row.rendererKey || !row.schemaKey || !row.schemaVersion ||
-            !rendererIsCompatible(
+            !rendererPublicResolutionIsAllowed(
               row.rendererKey,
               row.industryKey,
               row.schemaKey,

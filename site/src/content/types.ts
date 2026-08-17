@@ -12,6 +12,7 @@ export const RESTAURANT_EDITORIAL_TEMPLATE_KEY = "restaurant-editorial";
 export const GYM_SCHEMA_KEY = "gym.v1";
 export const GYM_SCHEMA_VERSION = 1;
 export const GYM_PULSO_RENDERER_KEY = "gym-pulso-v1";
+export const GYM_PULSO_TEMPLATE_KEY = "gym-pulso";
 
 export const RESTAURANT_DAYS = [
   "monday",

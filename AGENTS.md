@@ -11,7 +11,7 @@
 - No se deben almacenar secretos, tokens ni credenciales en el repositorio.
 - El proyecto debe operar inicialmente con herramientas gratuitas, open source o free tier.
 - No se deben habilitar cobros automáticos ni servicios pagados sin aprobación expresa.
-- El alcance B1 autorizado comprende los rubros Restaurante y Gimnasio; Gimnasio se rige por `docs/etapa-10a-contrato-gimnasio.md` y tiene implementación técnica parcial: soporte de industria `gym`, contrato y borradores `gym.v1`, y renderer aislado `gym-pulso-v1`. Esta implementación no constituye activación funcional: Gym continúa sin plantilla registrada, catálogo, preview, selección, publicación, restauración, editor, onboarding, staging ni producción.
+- El alcance B1 autorizado comprende los rubros Restaurante y Gimnasio; Gimnasio se rige por `docs/etapa-10a-contrato-gimnasio.md` y tiene implementación técnica parcial: soporte de industria `gym`, contrato y borradores `gym.v1`, renderer `gym-pulso-v1` y una plantilla Pulso Club visible exclusivamente en catálogo y preview privados. Esta implementación no constituye disponibilidad comercial: Gym continúa sin selección, publicación, restauración, editor, onboarding, staging ni producción.
 - Quedan fuera del MVP inicial: reservas, pagos, portales de clientes, inteligencia artificial productiva, módulos escolares o clínicos, marketplace, agentes y microservicios.
 - Los documentos de `docs/fuentes` serán considerados referencias oficiales del proyecto.
 - Ante contradicciones entre documentos, Codex debe informar el conflicto y no decidir silenciosamente.
