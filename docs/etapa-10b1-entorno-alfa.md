@@ -155,7 +155,7 @@ Docker. El resultado fue:
 | Comprobación | Resultado |
 | --- | --- |
 | `pnpm install --frozen-lockfile` | Aprobada; lockfile y patches sin cambios. |
-| `pnpm verify` | Aprobada; 89 pruebas, 0 fallas, 0 errores lint y 6 advertencias heredadas `no-img-element`. |
+| `pnpm verify` | Aprobada; 90 pruebas, 0 fallas, 0 errores lint y 6 advertencias heredadas `no-img-element`. |
 | Migraciones + RLS | 8/8; incluye UP/DOWN fail-closed de 0016. |
 | Auth / Admin / Client / Operations | 19/19, 14/14, 12/12 y 8/8. |
 | Content / Media seed / Media / Templates / Onboarding | 38/38, 5/5, 12/12, 13/13 y 5/5. |

@@ -1,7 +1,11 @@
 import "server-only";
 
 import type { EnvironmentSource } from "@/src/config/app-config";
-import { DatabaseConfigError, readDatabaseUrl } from "./config";
+import {
+  assertDatabaseRoleForPurpose,
+  DatabaseConfigError,
+  readDatabaseUrl,
+} from "./config";
 
 interface HyperdriveBinding {
   readonly connectionString: string;
@@ -46,6 +50,22 @@ export async function resolveApplicationDatabaseUrl(
     throw new DatabaseConfigError(
       "HYPERDRIVE",
       "the alpha runtime binding is required",
+    );
+  }
+  try {
+    const url = new URL(binding.connectionString);
+    if (
+      !["postgres:", "postgresql:"].includes(url.protocol) ||
+      !url.username
+    ) {
+      throw new Error("invalid PostgreSQL connection");
+    }
+    assertDatabaseRoleForPurpose("application", url.username, "HYPERDRIVE");
+  } catch (error) {
+    if (error instanceof DatabaseConfigError) throw error;
+    throw new DatabaseConfigError(
+      "HYPERDRIVE",
+      "the alpha runtime binding must contain a valid PostgreSQL connection",
     );
   }
   return binding.connectionString;

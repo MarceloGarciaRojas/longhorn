@@ -70,6 +70,19 @@ function roleMatchesPurpose(
   return purpose === "admin";
 }
 
+export function assertDatabaseRoleForPurpose(
+  purpose: DatabaseConnectionPurpose,
+  username: string,
+  variableName = VARIABLE_BY_PURPOSE[purpose],
+): void {
+  if (!roleMatchesPurpose(purpose, username)) {
+    throw new DatabaseConfigError(
+      variableName,
+      `alpha requires the restricted ${purpose} database role`,
+    );
+  }
+}
+
 export function assertAlphaDatabaseTarget(
   purpose: DatabaseConnectionPurpose,
   url: URL,
@@ -97,12 +110,7 @@ export function assertAlphaDatabaseTarget(
       "alpha requires sslmode=require, verify-ca or verify-full",
     );
   }
-  if (!roleMatchesPurpose(purpose, url.username)) {
-    throw new DatabaseConfigError(
-      VARIABLE_BY_PURPOSE[purpose],
-      `alpha requires the restricted ${purpose} database role`,
-    );
-  }
+  assertDatabaseRoleForPurpose(purpose, url.username);
 }
 
 export function assertSafeResetTarget(

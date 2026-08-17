@@ -47,3 +47,24 @@ test("alpha resolves only a non-empty Hyperdrive binding", async () => {
     /alpha runtime binding is unavailable/,
   );
 });
+
+test("alpha rejects privileged or malformed Hyperdrive connections", async () => {
+  for (const username of ["postgres", "nexi_migrator", "nexi_migrator.project"]) {
+    await assert.rejects(
+      () =>
+        resolveApplicationDatabaseUrl({ APP_ENV: "alpha" }, async () => ({
+          HYPERDRIVE: {
+            connectionString: `postgresql://${username}:secret@hyperdrive.local/database`,
+          },
+        })),
+      /restricted application database role/,
+    );
+  }
+  await assert.rejects(
+    () =>
+      resolveApplicationDatabaseUrl({ APP_ENV: "alpha" }, async () => ({
+        HYPERDRIVE: { connectionString: "https://hyperdrive.local/database" },
+      })),
+    /valid PostgreSQL connection/,
+  );
+});
