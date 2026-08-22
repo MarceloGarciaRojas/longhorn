@@ -141,6 +141,12 @@ Este es el único comando que consume `DATABASE_ADMIN_URL`. Crea o rota
 `nexi_migrator` y `nexi_app` con `NOSUPERUSER`, `NOCREATEDB`, `NOCREATEROLE`,
 `NOINHERIT` y `NOBYPASSRLS`, sin imprimir passwords.
 
+`nexi_migrator` recibe `CONNECT`, `TEMPORARY` y `CREATE` únicamente sobre la
+base Alpha objetivo, porque es el único rol autorizado a crear los esquemas y
+objetos versionados. `CREATE` sobre esa base no equivale a `CREATEDB`: el rol
+continúa sin privilegios administrativos globales. `nexi_app` conserva
+`CONNECT`, no recibe `CREATE` sobre la base y continúa sujeto a RLS.
+
 ### Fase 2 — conexiones restringidas e infraestructura completa
 
 Después del bootstrap, construir `DATABASE_MIGRATION_URL` con

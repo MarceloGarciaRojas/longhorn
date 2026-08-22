@@ -34,7 +34,7 @@
     "test:e2e": "pnpm build && node --test --test-concurrency=1 tests/e2e/auth-http.test.mjs",
     "test:auth-e2e": "pnpm test:e2e",
     "test:rendered": "pnpm build && node --test tests/rendered-html.test.mjs",
-    "test:db": "node --env-file-if-exists=.env.local --import tsx --test --test-concurrency=1 tests/db/migrations.test.ts tests/db/tenant-isolation.test.ts",
+    "test:db": "node --env-file-if-exists=.env.local --import tsx --test --test-concurrency=1 tests/db/alpha-provisioning.test.ts tests/db/migrations.test.ts tests/db/tenant-isolation.test.ts",
     "test:tenant-isolation": "node --env-file-if-exists=.env.local --import tsx --test --test-concurrency=1 tests/db/tenant-isolation.test.ts",
     "test:tenant-access": "pnpm test:tenant-isolation",
     "auth:seed": "pnpm db:seed",

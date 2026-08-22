@@ -4,6 +4,7 @@ import test from "node:test";
 import { loadAlphaConfig } from "../../src/alpha/config";
 import {
   ALPHA_DATABASE_PROVISIONED_MESSAGE,
+  ALPHA_DATABASE_PROVISIONING_SQL,
   loadAlphaDatabaseBootstrapConfig,
 } from "../../src/alpha/db-bootstrap-config";
 
@@ -101,6 +102,52 @@ test("Alpha DB bootstrap errors never expose role passwords", () => {
       return true;
     },
   );
+});
+
+test("Alpha DB provisioning grants only the required database CREATE privilege", () => {
+  assert.match(
+    ALPHA_DATABASE_PROVISIONING_SQL,
+    /GRANT CONNECT, TEMPORARY, CREATE ON DATABASE %I TO nexi_migrator/,
+  );
+  assert.match(
+    ALPHA_DATABASE_PROVISIONING_SQL,
+    /GRANT CONNECT ON DATABASE %I TO nexi_app/,
+  );
+  assert.match(
+    ALPHA_DATABASE_PROVISIONING_SQL,
+    /REVOKE CREATE ON DATABASE %I FROM nexi_app/,
+  );
+  assert.doesNotMatch(
+    ALPHA_DATABASE_PROVISIONING_SQL,
+    /GRANT[^'\n]*CREATE[^'\n]*TO nexi_app/i,
+  );
+  assert.match(
+    ALPHA_DATABASE_PROVISIONING_SQL,
+    /CREATE ROLE nexi_migrator LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE\s+NOINHERIT NOBYPASSRLS/,
+  );
+  assert.match(
+    ALPHA_DATABASE_PROVISIONING_SQL,
+    /CREATE ROLE nexi_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE\s+NOINHERIT NOBYPASSRLS/,
+  );
+  assert.doesNotMatch(ALPHA_DATABASE_PROVISIONING_SQL, /\bGRANT\s+SUPERUSER\b/i);
+  assert.doesNotMatch(ALPHA_DATABASE_PROVISIONING_SQL, /\bGRANT\s+CREATEDB\b/i);
+  assert.doesNotMatch(ALPHA_DATABASE_PROVISIONING_SQL, /\bGRANT\s+CREATEROLE\b/i);
+  assert.doesNotMatch(ALPHA_DATABASE_PROVISIONING_SQL, /\bGRANT\s+BYPASSRLS\b/i);
+  assert.doesNotMatch(ALPHA_DATABASE_PROVISIONING_SQL, /GRANT\s+nexi_migrator\s+TO\s+nexi_app/i);
+});
+
+test("Alpha DB privilege provisioning remains scoped and idempotent", () => {
+  assert.equal(
+    (ALPHA_DATABASE_PROVISIONING_SQL.match(/current_database\(\)/g) ?? []).length,
+    3,
+  );
+  assert.equal(
+    (ALPHA_DATABASE_PROVISIONING_SQL.match(/IF NOT EXISTS/g) ?? []).length,
+    2,
+  );
+  assert.doesNotMatch(ALPHA_DATABASE_PROVISIONING_SQL, /\bDROP\s+(?:ROLE|DATABASE)\b/i);
+  assert.doesNotMatch(ALPHA_DATABASE_PROVISIONING_SQL, new RegExp(APP_PASSWORD));
+  assert.doesNotMatch(ALPHA_DATABASE_PROVISIONING_SQL, new RegExp(MIGRATOR_PASSWORD));
 });
 
 test("full Alpha config remains strict after DB bootstrap", () => {
